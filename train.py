@@ -18,7 +18,6 @@ from tqdm import tqdm
 
 num_classes = (1, 40)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = "cpu"
 crop_size=400
 img_scale = 1.0 / 255
 depth_scale = 5000.0
@@ -58,6 +57,7 @@ print("[INFO]: Loading model")
 MNET = MNET(2,40)
 ckpt = torch.load("mobilenetv2-e6e8dd43.pth", map_location=device)
 MNET.enc.load_state_dict(ckpt)
+MNET.to(device)
 print("[INFO]: Model has {} parameters".format(sum([p.numel() for p in MNET.parameters()])))
 print("[INFO]: Model and weights loaded successfully")
 for param in MNET.enc.parameters():
