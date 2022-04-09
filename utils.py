@@ -17,7 +17,7 @@ import torchvision
 KEYS_TO_DTYPES = {
     "segm": torch.long,
     "mask": torch.long,
-    "depth": torch.float,
+    "depth": torch.long,
 }
 
 class NYUDDataset(Dataset):
@@ -31,7 +31,7 @@ class NYUDDataset(Dataset):
         self.seg_paths = seg_paths
         self.depth_paths = depth_paths
         self.transform = transform
-        self.mask_names = ("depth", "segm")
+        self.mask_names = ("segm", "depth")
 
     def __len__(self):
         return len(self.img_paths)
@@ -312,7 +312,7 @@ if __name__ == "__main__":
     depth_paths = sorted(glob.glob("./nyud/data/depth/*"))
 
     dataset = NYUDDataset(img_paths, seg_paths, depth_paths)
-    sample = dataset[0]
+    sample = dataset[5]
 
     f, ax = plt.subplots(1,3)
     ax[0].imshow(sample["image"])

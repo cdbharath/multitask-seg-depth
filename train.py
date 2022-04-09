@@ -97,7 +97,6 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
         output = model(image)
 
         for out, target, crit, loss_coeff in zip(output, targets, crits, loss_coeffs):
-            print(F.interpolate(out, target.size()[1:]), target.squeeze(dim=1))
             loss += loss_coeff * crit(F.interpolate(out, target.size()[1:], mode="bilinear", align_corners=False).squeeze(dim=1),
                                       target.squeeze(dim=1))
 
