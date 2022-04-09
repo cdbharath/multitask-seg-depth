@@ -5,6 +5,7 @@ import numpy as np
 import random
 from datetime import datetime
 import glob
+import cv2
 import scipy.io
 import torch
 import torch.nn as nn
@@ -23,11 +24,12 @@ class NYUDDataset(Dataset):
     """
     The dataset is downloaded from http://dl.caffe.berkeleyvision.org/nyud.tar.gz  
     """
-    def __init__(self, transform=None):
+    def __init__(self, img_paths, seg_paths, depth_paths, transform=None):
         super().__init__()
-        self.img_paths = sorted(glob.glob("./nyud/data/images/*"))
-        self.seg_paths = sorted(glob.glob("./nyud/segmentation/*"))
-        self.depth_paths = sorted(glob.glob("./nyud/data/depth/*"))
+
+        self.img_paths = img_paths
+        self.seg_paths = seg_paths
+        self.depth_paths = depth_paths
         self.transform = transform
         self.mask_names = ("depth", "segm")
 
@@ -35,14 +37,14 @@ class NYUDDataset(Dataset):
         return len(self.img_paths)
 
     def __getitem__(self, idx):
-        sample = {"image": np.array(Image.open(self.img_paths[idx]), dtype=np.float32),
-                  "segm": scipy.io.loadmat(self.seg_paths[idx])["segmentation"],
-                  "depth": np.array(Image.open(self.depth_paths[idx]), dtype=np.float32),
+        sample = {"image": np.array(Image.open(self.img_paths[idx])),
+                  "segm": np.array(scipy.io.loadmat(self.seg_paths[idx])["segmentation"]),
+                  "depth": np.array(Image.open(self.depth_paths[idx])),
                   "names":self.mask_names}
         if self.transform:
             sample = self.transform(sample)
-            if "names" in sample:
-                del sample["names"]
+            # if "names" in sample:
+            #     del sample["names"]
         return sample
 
 class Normalise:
@@ -305,6 +307,18 @@ class InvHuberLoss(nn.Module):
 
 
 if __name__ == "__main__":
-    dataset = NYUDDataset()
-    for key, sample in dataset[0].items():
-        print(key, sample.shape)
+    img_paths = sorted(glob.glob("./nyud/data/images/*"))
+    seg_paths = sorted(glob.glob("./nyud/segmentation/*"))
+    depth_paths = sorted(glob.glob("./nyud/data/depth/*"))
+
+    dataset = NYUDDataset(img_paths, seg_paths, depth_paths)
+    sample = dataset[0]
+
+    f, ax = plt.subplots(1,3)
+    ax[0].imshow(sample["image"])
+    ax[1].imshow(sample["segm"])
+    ax[2].imshow(sample["depth"]) 
+    plt.show() 
+
+    # cv2.imshow('', sample["image"])
+    # cv2.waitKey(0)
