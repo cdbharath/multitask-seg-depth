@@ -31,7 +31,7 @@ class NYUDDataset(Dataset):
         self.seg_paths = seg_paths
         self.depth_paths = depth_paths
         self.transform = transform
-        self.mask_names = ("segm", "depth")
+        self.mask_names = ("depth", "segm")
 
     def __len__(self):
         return len(self.img_paths)
@@ -314,11 +314,11 @@ if __name__ == "__main__":
     dataset = NYUDDataset(img_paths, seg_paths, depth_paths)
     sample = dataset[5]
 
-    f, ax = plt.subplots(1,3)
-    ax[0].imshow(sample["image"])
-    ax[1].imshow(sample["segm"])
-    ax[2].imshow(sample["depth"]) 
-    plt.show() 
+    # f, ax = plt.subplots(1,3)
+    # ax[0].imshow(sample["image"])
+    # ax[1].imshow(sample["segm"])
+    # ax[2].imshow(sample["depth"]) 
+    # plt.show() 
 
     # cv2.imshow('', sample["image"])
     # cv2.waitKey(0)

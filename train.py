@@ -16,7 +16,7 @@ from utils import AverageMeter
 from utils import MeanIoU, RMSE
 from tqdm import tqdm
 
-num_classes = (1, 40)
+num_classes = (1, 40 + 1)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 crop_size=400
 img_scale = 1.0 / 255
@@ -54,7 +54,7 @@ valloader = DataLoader(NYUDDataset(val_img_paths, val_seg_paths, val_depth_paths
                        shuffle=False, num_workers=4,
                        drop_last=False)
 print("[INFO]: Loading model")
-MNET = MNET(2,40)
+MNET = MNET(2,num_classes[1])
 ckpt = torch.load("mobilenetv2-e6e8dd43.pth", map_location=device)
 MNET.enc.load_state_dict(ckpt)
 MNET.to(device)
@@ -75,7 +75,8 @@ momentum_encoder = 0.9
 momentum_decoder = 0.9
 weight_decay_encoder = 1e-5
 weight_decay_decoder = 1e-5
-n_epochs = 1000
+# n_epochs = 1000
+n_epochs = 10
 
 optims = [torch.optim.SGD(MNET.enc.parameters(), lr=lr_encoder, momentum=momentum_encoder, weight_decay=weight_decay_encoder),
           torch.optim.SGD(MNET.dec.parameters(), lr=lr_decoder, momentum=momentum_decoder, weight_decay=weight_decay_decoder)]
@@ -93,11 +94,13 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
     for sample in pbar:
         loss = 0.0
         image = sample["image"].float().to(device)
-        targets = [sample[k].to(device) for k in dataloader.dataset.mask_names]
+        targets = [sample[k].to(device) for k in dataloader.dataset.mask_names]        
         output = model(image)
 
         for out, target, crit, loss_coeff in zip(output, targets, crits, loss_coeffs):
-            loss += loss_coeff * crit(F.interpolate(out, target.size()[1:], mode="bilinear", align_corners=False).squeeze(dim=1),
+
+            target_size = target.size()[1:]
+            loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
                                       target.squeeze(dim=1))
 
         for opt in opts:
@@ -130,14 +133,14 @@ def validate(model, metrics, dataloader):
     with torch.no_grad():
         for sample in pbar:
             # Get the Data
-            input = sample["image"].float().to(device)
-            targets = [sample[k].to(device) for k in dataloader.dataset.masks_names]
+            image = sample["image"].float().to(device)
+            targets = [sample[k].to(device) for k in dataloader.dataset.mask_names]
 
             #input, targets = get_input_and_targets(sample=sample, dataloader=dataloader, device=device)
             targets = [target.squeeze(dim=1).cpu().numpy() for target in targets]
 
             # Forward
-            outputs = model(input)
+            outputs = model(image)
             #outputs = make_list(outputs)
 
             # Backward
