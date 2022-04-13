@@ -16,6 +16,8 @@ from utils import AverageMeter
 from utils import MeanIoU, RMSE
 from tqdm import tqdm
 
+torch.autograd.detect_anomaly()
+
 num_classes = (1, 40 + 1)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 crop_size=400
@@ -67,7 +69,8 @@ ignore_index = 255
 ignore_depth = 0
 
 crit_segm = nn.CrossEntropyLoss(ignore_index=ignore_index).to(device)
-crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
+# crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
+crit_depth = nn.MSELoss().to(device)
 
 lr_encoder = 1e-2
 lr_decoder = 1e-3
@@ -97,11 +100,15 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
         targets = [sample[k].to(device) for k in dataloader.dataset.mask_names]        
         output = model(image)
 
-        for out, target, crit, loss_coeff in zip(output, targets, crits, loss_coeffs):
-
+        for out, target, crit, loss_coeff, mask in zip(output, targets, crits, loss_coeffs, dataloader.dataset.mask_names):
             target_size = target.size()[1:]
-            loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
-                                      target.squeeze(dim=1))
+
+            if mask == "depth":
+                loss += loss_coeff * torch.sqrt(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1).float(),
+                                        target.squeeze(dim=1).float()))
+            else:
+                loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
+                                        target.squeeze(dim=1))
 
         for opt in opts:
             opt.zero_grad()
@@ -162,11 +169,12 @@ val_every = 5
 loss_coeffs = (0.5, 0.5)
 print("[INFO]: Start Training")
 for i in range(0, n_epochs):
-    for sched in opt_scheds:
-        sched.step(i)
 
     print("Epoch {:d}".format(i))
     train(MNET, optims, [crit_depth, crit_segm], trainloader, loss_coeffs)
+
+    for sched in opt_scheds:
+        sched.step()
 
     if i % val_every == 0:
         metrics = [MeanIoU(num_classes[1]), RMSE(ignore_val=ignore_depth)]
