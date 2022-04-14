@@ -22,7 +22,8 @@ num_classes = (1, 40 + 1)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 crop_size=400
 img_scale = 1.0 / 255
-depth_scale = 5000.0
+# depth_scale = 5000.0
+depth_scale = 1000.0
 
 img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
@@ -69,8 +70,8 @@ ignore_index = 255
 ignore_depth = 0
 
 crit_segm = nn.CrossEntropyLoss(ignore_index=ignore_index).to(device)
-# crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
-crit_depth = nn.MSELoss().to(device)
+crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
+# crit_depth = nn.MSELoss().to(device)
 
 lr_encoder = 1e-2
 lr_decoder = 1e-3
@@ -177,7 +178,8 @@ for i in range(0, n_epochs):
         sched.step()
 
     if i % val_every == 0:
-        metrics = [MeanIoU(num_classes[1]), RMSE(ignore_val=ignore_depth)]
+        metrics = [RMSE(ignore_val=ignore_depth), MeanIoU(num_classes[1])]
+
         with torch.no_grad():
             vals = validate(MNET, metrics, valloader)
 
