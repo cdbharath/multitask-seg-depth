@@ -58,7 +58,7 @@ valloader = DataLoader(NYUDDataset(val_img_paths, val_seg_paths, val_depth_paths
                        drop_last=False)
 print("[INFO]: Loading model")
 MNET = MNET(2,num_classes[1])
-ckpt = torch.load("mobilenetv2-e6e8dd43.pth", map_location=device)
+ckpt = torch.load("mobilenetv2-pretrained.pth", map_location=device)
 MNET.enc.load_state_dict(ckpt)
 MNET.to(device)
 print("[INFO]: Model has {} parameters".format(sum([p.numel() for p in MNET.parameters()])))
