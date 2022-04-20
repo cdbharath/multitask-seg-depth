@@ -10,7 +10,7 @@ from torchvision.transforms import transforms
 from utils import Normalise, RandomCrop, ToTensor, RandomMirror
 from utils import NYUDDataset
 from torch.utils.data import DataLoader
-from mnet.model1 import MNET
+from mnet.model import MNET
 from utils import InvHuberLoss
 from utils import AverageMeter
 from utils import MeanIoU, RMSE
