@@ -14,6 +14,7 @@ KEYS_TO_DTYPES = {
     "segm": torch.long,
     "mask": torch.long,
     "depth": torch.long,
+    "ins": torch.long,
 }
 
 class Normalise:
@@ -273,3 +274,6 @@ class InvHuberLoss(nn.Module):
         mask_err2 = err > c
         cost = torch.mean(err * mask_err.float() + err2 * mask_err2.float())
         return cost
+
+def plot_loss():
+    pass

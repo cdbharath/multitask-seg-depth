@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.transforms import transforms
 from utils import Normalise, RandomCrop, ToTensor, RandomMirror
-from utils import NYUDDataset
+from dataset import CityscapesDataset
 from torch.utils.data import DataLoader
 from mnet.model import MNET
 from utils import InvHuberLoss
@@ -22,8 +22,7 @@ num_classes = (1, 40 + 1)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 crop_size=400
 img_scale = 1.0 / 255
-# depth_scale = 5000.0
-depth_scale = 1000.0
+depth_scale = 32257.0
 
 img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
@@ -37,28 +36,29 @@ transform_valid = transforms.Compose([Normalise(scale=img_scale, mean=img_mean.r
 train_batch_size = 4
 valid_batch_size = 4
 
-img_paths = sorted(glob.glob("./nyud/data/images/*"))
-seg_paths = sorted(glob.glob("./nyud/segmentation/*"))
-depth_paths = sorted(glob.glob("./nyud/data/depth/*"))
-train_img_paths = img_paths[:int(0.8*len(img_paths))]
-train_seg_paths = seg_paths[:int(0.8*len(img_paths))]
-train_depth_paths = depth_paths[:int(0.8*len(img_paths))] 
-val_img_paths = img_paths[int(0.8*len(img_paths)):]
-val_seg_paths = seg_paths[int(0.8*len(img_paths)):]
-val_depth_paths = depth_paths[int(0.8*len(img_paths)):] 
+train_img_paths = sorted(glob.glob("./cityscapes/leftImg8bit_trainvaltest/leftImg8bit/train/*/*"))
+train_seg_paths = sorted(glob.glob("./cityscapes/gtFine_trainvaltest/gtFine/train/*/*labelIds.png"))
+train_ins_paths = sorted(glob.glob("./cityscapes/gtFine_trainvaltest/gtFine/train/*/*instanceIds.png"))
+train_depth_paths = sorted(glob.glob("./cityscapes/disparity_trainvaltest/disparity/train/*/*"))
+val_img_paths = sorted(glob.glob("./cityscapes/leftImg8bit_trainvaltest/leftImg8bit/val/*/*"))
+val_seg_paths = sorted(glob.glob("./cityscapes/gtFine_trainvaltest/gtFine/val/*/*labelIds.png"))
+val_ins_paths = sorted(glob.glob("./cityscapes/gtFine_trainvaltest/gtFine/val/*/*instanceIds.png")) 
+val_depth_paths = sorted(glob.glob("./cityscapes/disparity_trainvaltest/disparity/val/*/*")) 
 
 print("[INFO]: Loading data")
-trainloader = DataLoader(NYUDDataset(train_img_paths, train_seg_paths, train_depth_paths, transform=transform_train),
+trainloader = DataLoader(CityscapesDataset(train_img_paths, train_seg_paths, train_ins_paths, train_depth_paths, transform=transform_train),
                          batch_size=train_batch_size,
                          shuffle=True, num_workers=4,
                          drop_last=True)
-valloader = DataLoader(NYUDDataset(val_img_paths, val_seg_paths, val_depth_paths, transform=transform_valid),
+valloader = DataLoader(CityscapesDataset(val_img_paths, val_seg_paths, val_ins_paths, val_depth_paths, transform=transform_valid),
                        batch_size=valid_batch_size,
                        shuffle=False, num_workers=4,
                        drop_last=False)
+
 print("[INFO]: Loading model")
+
 MNET = MNET(2,num_classes[1])
-ckpt = torch.load("mobilenetv2-pretrained.pth", map_location=device)
+ckpt = torch.load("weights/mobilenetv2-pretrained.pth", map_location=device)
 MNET.enc.load_state_dict(ckpt)
 MNET.to(device)
 print("[INFO]: Model has {} parameters".format(sum([p.numel() for p in MNET.parameters()])))
@@ -79,6 +79,7 @@ momentum_encoder = 0.9
 momentum_decoder = 0.9
 weight_decay_encoder = 1e-5
 weight_decay_decoder = 1e-5
+
 # n_epochs = 1000
 n_epochs = 10
 
@@ -144,12 +145,10 @@ def validate(model, metrics, dataloader):
             image = sample["image"].float().to(device)
             targets = [sample[k].to(device) for k in dataloader.dataset.mask_names]
 
-            #input, targets = get_input_and_targets(sample=sample, dataloader=dataloader, device=device)
             targets = [target.squeeze(dim=1).cpu().numpy() for target in targets]
 
             # Forward
             outputs = model(image)
-            #outputs = make_list(outputs)
 
             # Backward
             for out, target, metric in zip(outputs, targets, metrics):
