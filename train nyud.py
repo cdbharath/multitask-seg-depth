@@ -19,7 +19,7 @@ from tqdm import tqdm
 import time
 timestr = time.strftime("%Y%m%d-%H%M%S")
 log_dir = os.path.join("./logs", "run_" + timestr) 
-os.mkdir(log_dir)
+os.makedirs(log_dir)
 
 torch.autograd.detect_anomaly()
 
