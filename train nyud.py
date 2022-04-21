@@ -16,6 +16,11 @@ from utils import AverageMeter
 from utils import MeanIoU, RMSE
 from tqdm import tqdm
 
+import time
+timestr = time.strftime("%Y%m%d-%H%M%S")
+log_dir = os.path.join("./logs", "run_" + timestr) 
+os.mkdir(log_dir)
+
 torch.autograd.detect_anomaly()
 
 num_classes = (1, 40 + 1)
@@ -132,6 +137,7 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
             "Loss {:.3f} | Avg. Loss {:.3f}".format(loss.item(), loss_meter.avg)
         )
 
+    return loss_meter.avg
 
 def validate(model, metrics, dataloader):
     device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
@@ -168,7 +174,8 @@ def validate(model, metrics, dataloader):
                     target,
                 )
             pbar.set_description(get_val(metrics)[1])
-    vals, _ = get_val(metrics)
+    vals, val_str = get_val(metrics)
+    print("Val metrics" + val_str)
     print("----" * 5)
     return vals
 
@@ -179,7 +186,9 @@ print("[INFO]: Start Training")
 for i in range(0, n_epochs):
 
     print("Epoch {:d}".format(i))
-    train(MNET, optims, [crit_depth, crit_segm], trainloader, loss_coeffs)
+    avg_loss = train(MNET, optims, [crit_depth, crit_segm], trainloader, loss_coeffs)
+
+    print("Avg. Training Loss {:.3f}".format(avg_loss))
 
     for sched in opt_scheds:
         sched.step()
@@ -191,5 +200,5 @@ for i in range(0, n_epochs):
             vals = validate(MNET, metrics, valloader)
 
     if n_epochs%50:
-        print("Save Checkpoint")
-        torch.save(MNET.state_dict(), "checkpoint.pth")
+        print("Saving Checkpoint")
+        torch.save(MNET.state_dict(), os.path.join(log_dir, "checkpoint_epoch" + str(i) + ".pth"))
