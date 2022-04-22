@@ -222,6 +222,6 @@ for i in range(0, n_epochs):
     plt.plot(loss_accumulator)
     plt.savefig(os.path.join(log_dir, "meaniou_sem.png"))
 
-    if n_epochs%50:
+    if i%50 == 0:
         print("Saving Checkpoint")
         torch.save(MNET.state_dict(), os.path.join(log_dir, "checkpoint_epoch" + str(i) + ".pth"))

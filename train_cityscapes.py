@@ -25,7 +25,7 @@ torch.autograd.detect_anomaly()
 
 num_classes = (1, 40 + 1)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-crop_size=400
+crop_size = 400
 img_scale = 1.0 / 255
 depth_scale = 3225.70
 
@@ -33,13 +33,15 @@ img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
 transform_train = transforms.Compose([RandomMirror(),
                                       RandomCrop(crop_size=crop_size),
+                                      transforms.Resize((224, 224)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor()])
-transform_valid = transforms.Compose([Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
+transform_valid = transforms.Compose([transforms.Resize((224, 224)),
+                                      Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor()])
 
-train_batch_size = 4
-valid_batch_size = 4
+train_batch_size = 2
+valid_batch_size = 2
 
 train_img_paths = sorted(glob.glob("./cityscapes/leftImg8bit_trainvaltest/leftImg8bit/train/*/*"))
 train_seg_paths = sorted(glob.glob("./cityscapes/gtFine_trainvaltest/gtFine/train/*/*labelIds.png"))
@@ -213,6 +215,6 @@ for i in range(0, n_epochs):
     plt.plot(loss_accumulator)
     plt.savefig(os.path.join(log_dir, "meaniou_sem.png"))
 
-    if n_epochs%50:
+    if i%50 == 0:
         print("Saving Checkpoint")
         torch.save(MNET.state_dict(), os.path.join(log_dir, "checkpoint_epoch" + str(i) + ".pth"))
