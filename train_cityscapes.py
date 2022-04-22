@@ -16,13 +16,18 @@ from utils import AverageMeter
 from utils import MeanIoU, RMSE
 from tqdm import tqdm
 
+import time
+timestr = time.strftime("%Y%m%d-%H%M%S")
+log_dir = os.path.join("./logs", "run_" + timestr) 
+os.makedirs(log_dir)
+
 torch.autograd.detect_anomaly()
 
 num_classes = (1, 40 + 1)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 crop_size=400
 img_scale = 1.0 / 255
-depth_scale = 32257.0
+depth_scale = 3225.70
 
 img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
@@ -105,12 +110,11 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
         for out, target, crit, loss_coeff, mask in zip(output, targets, crits, loss_coeffs, dataloader.dataset.mask_names):
             target_size = target.size()[1:]
 
-            if mask == "depth":
-                loss += loss_coeff * torch.sqrt(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1).float(),
-                                        target.squeeze(dim=1).float()))
-            else:
-                loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
-                                        target.squeeze(dim=1))
+            if mask == "ins":
+                pass
+            loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
+                                    target.squeeze(dim=1))
+
 
         for opt in opts:
             opt.zero_grad()
@@ -124,6 +128,7 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
             "Loss {:.3f} | Avg. Loss {:.3f}".format(loss.item(), loss_meter.avg)
         )
 
+    return loss_meter.avg
 
 def validate(model, metrics, dataloader):
     device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
@@ -160,10 +165,15 @@ def validate(model, metrics, dataloader):
                     target,
                 )
             pbar.set_description(get_val(metrics)[1])
-    vals, _ = get_val(metrics)
+    vals, val_str = get_val(metrics)
+    print("Val Metrics: " + val_str)
     print("----" * 5)
     return vals
 
+
+loss_accumulator = []
+depth_rmse_accumulator = []
+sem_meaniou_accumulator = []
 
 val_every = 5
 loss_coeffs = (0.5, 0.5)
@@ -171,7 +181,9 @@ print("[INFO]: Start Training")
 for i in range(0, n_epochs):
 
     print("Epoch {:d}".format(i))
-    train(MNET, optims, [crit_depth, crit_segm], trainloader, loss_coeffs)
+    avg_loss = train(MNET, optims, [crit_depth, crit_segm], trainloader, loss_coeffs)
+
+    print("Avg Training Loss {:.3f}".format(avg_loss))
 
     for sched in opt_scheds:
         sched.step()
@@ -182,5 +194,25 @@ for i in range(0, n_epochs):
         with torch.no_grad():
             vals = validate(MNET, metrics, valloader)
 
-    print("Save Checkpoint")
-    torch.save(MNET.state_dict(), "chekcpoint.pth")
+    loss_accumulator.append(avg_loss)
+    depth_rmse_accumulator.append(vals[0])
+    sem_meaniou_accumulator.append(vals[1])
+
+    plt.figure(1)
+    plt.title("Training Loss")
+    plt.plot(loss_accumulator)
+    plt.savefig(os.path.join(log_dir, "training_loss.png"))
+
+    plt.figure(2)
+    plt.title("RMSE Depth Estimation")
+    plt.plot(loss_accumulator)
+    plt.savefig(os.path.join(log_dir, "rmse_depth.png"))
+
+    plt.figure(3)
+    plt.title("Mean IOU Semantic Segmentation")
+    plt.plot(loss_accumulator)
+    plt.savefig(os.path.join(log_dir, "meaniou_sem.png"))
+
+    if n_epochs%50:
+        print("Saving Checkpoint")
+        torch.save(MNET.state_dict(), os.path.join(log_dir, "checkpoint_epoch" + str(i) + ".pth"))
