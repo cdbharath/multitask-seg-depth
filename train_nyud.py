@@ -175,7 +175,7 @@ def validate(model, metrics, dataloader):
                 )
             pbar.set_description(get_val(metrics)[1])
     vals, val_str = get_val(metrics)
-    print("Val metrics" + val_str)
+    print("Val Metrics: " + val_str)
     print("----" * 5)
     return vals
 
@@ -192,7 +192,7 @@ for i in range(0, n_epochs):
     print("Epoch {:d}".format(i))
     avg_loss = train(MNET, optims, [crit_depth, crit_segm], trainloader, loss_coeffs)
 
-    print("Avg. Training Loss {:.3f}".format(avg_loss))
+    print("Avg Training Loss {:.3f}".format(avg_loss))
 
     for sched in opt_scheds:
         sched.step()
