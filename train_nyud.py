@@ -180,6 +180,10 @@ def validate(model, metrics, dataloader):
     return vals
 
 
+loss_accumulator = []
+depth_rmse_accumulator = []
+sem_meaniou_accumulator = []
+
 val_every = 5
 loss_coeffs = (0.5, 0.5)
 print("[INFO]: Start Training")
@@ -198,6 +202,25 @@ for i in range(0, n_epochs):
 
         with torch.no_grad():
             vals = validate(MNET, metrics, valloader)
+
+    loss_accumulator.append(avg_loss)
+    depth_rmse_accumulator.append(vals[0])
+    sem_meaniou_accumulator.append(vals[1])
+
+    plt.figure(1)
+    plt.title("Training Loss")
+    plt.plot(loss_accumulator)
+    plt.savefig(os.path.join(log_dir, "training_loss.png"))
+
+    plt.figure(2)
+    plt.title("RMSE Depth Estimation")
+    plt.plot(loss_accumulator)
+    plt.savefig(os.path.join(log_dir, "rmse_depth.png"))
+
+    plt.figure(3)
+    plt.title("Mean IOU Semantic Segmentation")
+    plt.plot(loss_accumulator)
+    plt.savefig(os.path.join(log_dir, "meaniou_sem.png"))
 
     if n_epochs%50:
         print("Saving Checkpoint")
