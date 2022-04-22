@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.transforms import transforms
-from utils import Normalise, RandomCrop, ToTensor, RandomMirror
+from utils import Normalise, RandomCrop, ToTensor, RandomMirror, Resize
 from dataset import CityscapesDataset
 from torch.utils.data import DataLoader
 from mnet.model import MNET
@@ -33,10 +33,10 @@ img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
 transform_train = transforms.Compose([RandomMirror(),
                                       # RandomCrop(crop_size=crop_size),
-                                      transforms.Resize((224, 224)),
+                                      Resize((224, 244)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor()])
-transform_valid = transforms.Compose([transforms.Resize((224, 224)),
+transform_valid = transforms.Compose([Resize((224, 244)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor()])
 

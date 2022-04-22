@@ -7,6 +7,7 @@ import scipy.io
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision.transforms import transforms
 import torchvision
 
 # Usual dtypes for common modalities
@@ -16,6 +17,20 @@ KEYS_TO_DTYPES = {
     "depth": torch.long,
     "ins": torch.long,
 }
+
+class Resize:
+    """
+    Resize the image and labels
+    """
+
+    def __init__(self, size):
+        self.size = size
+
+    def __call__(self, sample):
+        sample["image"] = cv2.resize(sample["image"].astype('float32'), self.size)
+        for mask in sample["names"]:
+            sample[mask] = cv2.resize(sample[mask].astype('float32'), self.size)
+        return sample
 
 class Normalise:
     """
