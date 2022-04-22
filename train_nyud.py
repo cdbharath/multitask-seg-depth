@@ -88,8 +88,7 @@ momentum_decoder = 0.9
 weight_decay_encoder = 1e-5
 weight_decay_decoder = 1e-5
 
-# n_epochs = 1000
-n_epochs = 10
+n_epochs = 1000
 
 optims = [torch.optim.SGD(MNET.enc.parameters(), lr=lr_encoder, momentum=momentum_encoder, weight_decay=weight_decay_encoder),
           torch.optim.SGD(MNET.dec.parameters(), lr=lr_decoder, momentum=momentum_decoder, weight_decay=weight_decay_decoder)]

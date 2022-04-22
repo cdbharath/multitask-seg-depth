@@ -16,9 +16,11 @@ from utils import AverageMeter
 from utils import MeanIoU, RMSE
 from tqdm import tqdm
 
+cwd = os.path.dirname(os.path.abspath(__file__))
+
 import time
 timestr = time.strftime("%Y%m%d-%H%M%S")
-log_dir = os.path.join("./logs", "run_" + timestr) 
+log_dir = os.path.join(cwd, "logs", "run_" + timestr) 
 os.makedirs(log_dir)
 
 torch.autograd.detect_anomaly()
@@ -43,29 +45,30 @@ transform_valid = transforms.Compose([Resize((224, 244)),
 train_batch_size = 2
 valid_batch_size = 2
 
-train_img_paths = sorted(glob.glob("./cityscapes/leftImg8bit_trainvaltest/leftImg8bit/train/*/*"))
-train_seg_paths = sorted(glob.glob("./cityscapes/gtFine_trainvaltest/gtFine/train/*/*labelIds.png"))
-train_ins_paths = sorted(glob.glob("./cityscapes/gtFine_trainvaltest/gtFine/train/*/*instanceIds.png"))
-train_depth_paths = sorted(glob.glob("./cityscapes/disparity_trainvaltest/disparity/train/*/*"))
-val_img_paths = sorted(glob.glob("./cityscapes/leftImg8bit_trainvaltest/leftImg8bit/val/*/*"))
-val_seg_paths = sorted(glob.glob("./cityscapes/gtFine_trainvaltest/gtFine/val/*/*labelIds.png"))
-val_ins_paths = sorted(glob.glob("./cityscapes/gtFine_trainvaltest/gtFine/val/*/*instanceIds.png")) 
-val_depth_paths = sorted(glob.glob("./cityscapes/disparity_trainvaltest/disparity/val/*/*")) 
+print(cwd)
+train_img_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/leftImg8bit_trainvaltest/leftImg8bit/train/*/*")))
+train_seg_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/gtFine_trainvaltest/gtFine/train/*/*labelIds.png")))
+train_ins_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/gtFine_trainvaltest/gtFine/train/*/*instanceIds.png")))
+train_depth_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/disparity_trainvaltest/disparity/train/*/*")))
+val_img_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/leftImg8bit_trainvaltest/leftImg8bit/val/*/*")))
+val_seg_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/gtFine_trainvaltest/gtFine/val/*/*labelIds.png")))
+val_ins_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/gtFine_trainvaltest/gtFine/val/*/*instanceIds.png"))) 
+val_depth_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/disparity_trainvaltest/disparity/val/*/*")))
 
 print("[INFO]: Loading data")
 trainloader = DataLoader(CityscapesDataset(train_img_paths, train_seg_paths, train_ins_paths, train_depth_paths, transform=transform_train),
                          batch_size=train_batch_size,
-                         shuffle=True, num_workers=4,
+                         shuffle=True, num_workers=1,
                          drop_last=True)
 valloader = DataLoader(CityscapesDataset(val_img_paths, val_seg_paths, val_ins_paths, val_depth_paths, transform=transform_valid),
                        batch_size=valid_batch_size,
-                       shuffle=False, num_workers=4,
+                       shuffle=False, num_workers=1,
                        drop_last=False)
 
 print("[INFO]: Loading model")
 
 MNET = MNET(2,num_classes[1])
-ckpt = torch.load("weights/mobilenetv2-pretrained.pth", map_location=device)
+ckpt = torch.load(os.path.join(cwd, "weights/mobilenetv2-pretrained.pth"), map_location=device)
 MNET.enc.load_state_dict(ckpt)
 MNET.to(device)
 print("[INFO]: Model has {} parameters".format(sum([p.numel() for p in MNET.parameters()])))
@@ -81,14 +84,13 @@ crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
 # crit_depth = nn.MSELoss().to(device)
 
 lr_encoder = 1e-2
-lr_decoder = 1e-3
+lr_decoder = 1e-2
 momentum_encoder = 0.9
 momentum_decoder = 0.9
 weight_decay_encoder = 1e-5
 weight_decay_decoder = 1e-5
 
-# n_epochs = 1000
-n_epochs = 10
+n_epochs = 250
 
 optims = [torch.optim.SGD(MNET.enc.parameters(), lr=lr_encoder, momentum=momentum_encoder, weight_decay=weight_decay_encoder),
           torch.optim.SGD(MNET.dec.parameters(), lr=lr_decoder, momentum=momentum_decoder, weight_decay=weight_decay_decoder)]
