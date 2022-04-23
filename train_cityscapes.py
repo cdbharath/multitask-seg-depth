@@ -80,11 +80,11 @@ ignore_index = 255
 ignore_depth = 0
 
 crit_segm = nn.CrossEntropyLoss(ignore_index=ignore_index).to(device)
-crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
-# crit_depth = nn.MSELoss().to(device)
+# crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
+crit_depth = nn.MSELoss().to(device)
 
 lr_encoder = 1e-2
-lr_decoder = 1e-2
+lr_decoder = 1e-3
 momentum_encoder = 0.9
 momentum_decoder = 0.9
 weight_decay_encoder = 1e-5
@@ -116,8 +116,16 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
 
             if mask == "ins":
                 pass
-            loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
-                                    target.squeeze(dim=1))
+            elif mask == "depth":
+                loss += loss_coeff * torch.sqrt(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1).float(),
+                                        target.squeeze(dim=1).float()))
+            else:
+                loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
+                                        target.squeeze(dim=1))
+
+            # Uncomment if using Huber Loss
+            # loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
+            #                         target.squeeze(dim=1))
 
 
         for opt in opts:
@@ -209,12 +217,12 @@ for i in range(0, n_epochs):
 
     plt.figure(2)
     plt.title("RMSE Depth Estimation")
-    plt.plot(loss_accumulator)
+    plt.plot(depth_rmse_accumulator)
     plt.savefig(os.path.join(log_dir, "rmse_depth.png"))
 
     plt.figure(3)
     plt.title("Mean IOU Semantic Segmentation")
-    plt.plot(loss_accumulator)
+    plt.plot(sem_meaniou_accumulator)
     plt.savefig(os.path.join(log_dir, "meaniou_sem.png"))
 
     if i%50 == 0:
