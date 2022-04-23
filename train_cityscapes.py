@@ -45,7 +45,6 @@ transform_valid = transforms.Compose([Resize((224, 244)),
 train_batch_size = 2
 valid_batch_size = 2
 
-print(cwd)
 train_img_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/leftImg8bit_trainvaltest/leftImg8bit/train/*/*")))
 train_seg_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/gtFine_trainvaltest/gtFine/train/*/*labelIds.png")))
 train_ins_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/gtFine_trainvaltest/gtFine/train/*/*instanceIds.png")))
@@ -114,6 +113,7 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
         for out, target, crit, loss_coeff, mask in zip(output, targets, crits, loss_coeffs, dataloader.dataset.mask_names):
             target_size = target.size()[1:]
 
+            # Uncomment while using mean squared error
             if mask == "ins":
                 pass
             elif mask == "depth":

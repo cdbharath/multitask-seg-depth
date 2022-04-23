@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.transforms import transforms
-from utils import Normalise, RandomCrop, ToTensor, RandomMirror
+from utils import Normalise, RandomCrop, ToTensor, RandomMirror, Resize
 from dataset import NYUDDataset
 from torch.utils.data import DataLoader
 from mnet.model import MNET
@@ -16,16 +16,18 @@ from utils import AverageMeter
 from utils import MeanIoU, RMSE
 from tqdm import tqdm
 
+cwd = os.path.dirname(os.path.abspath(__file__))
+
 import time
 timestr = time.strftime("%Y%m%d-%H%M%S")
-log_dir = os.path.join("./logs", "run_" + timestr) 
+log_dir = os.path.join(cwd, "logs", "run_" + timestr) 
 os.makedirs(log_dir)
 
 torch.autograd.detect_anomaly()
 
 num_classes = (1, 40 + 1)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-crop_size=400
+crop_size = 400
 img_scale = 1.0 / 255
 
 # depth_scale = 5000.0
@@ -35,17 +37,19 @@ img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
 transform_train = transforms.Compose([RandomMirror(),
                                       RandomCrop(crop_size=crop_size),
+                                      Resize((224, 244)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor()])
-transform_valid = transforms.Compose([Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
+transform_valid = transforms.Compose([Resize((224, 244)),
+                                      Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor()])
 
-train_batch_size = 4
-valid_batch_size = 4
+train_batch_size = 2
+valid_batch_size = 2
 
-img_paths = sorted(glob.glob("./nyud/data/images/*"))
-seg_paths = sorted(glob.glob("./nyud/segmentation/*"))
-depth_paths = sorted(glob.glob("./nyud/data/depth/*"))
+img_paths = sorted(glob.glob(os.path.join(cwd, "nyud/data/images/*")))
+seg_paths = sorted(glob.glob(os.path.join(cwd, "nyud/segmentation/*")))
+depth_paths = sorted(glob.glob(os.path.join(cwd, "nyud/data/depth/*")))
 train_img_paths = img_paths[:int(0.8*len(img_paths))]
 train_seg_paths = seg_paths[:int(0.8*len(img_paths))]
 train_depth_paths = depth_paths[:int(0.8*len(img_paths))] 
@@ -66,7 +70,7 @@ valloader = DataLoader(NYUDDataset(val_img_paths, val_seg_paths, val_depth_paths
 print("[INFO]: Loading model")
 
 MNET = MNET(2,num_classes[1])
-ckpt = torch.load("weights/mobilenetv2-pretrained.pth", map_location=device)
+ckpt = torch.load(os.path.join(cwd, "weights/mobilenetv2-pretrained.pth"), map_location=device)
 MNET.enc.load_state_dict(ckpt)
 MNET.to(device)
 print("[INFO]: Model has {} parameters".format(sum([p.numel() for p in MNET.parameters()])))
@@ -78,8 +82,8 @@ ignore_index = 255
 ignore_depth = 0
 
 crit_segm = nn.CrossEntropyLoss(ignore_index=ignore_index).to(device)
-crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
-# crit_depth = nn.MSELoss().to(device)
+# crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
+crit_depth = nn.MSELoss().to(device)
 
 lr_encoder = 1e-2
 lr_decoder = 1e-3
@@ -113,15 +117,16 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
             target_size = target.size()[1:]
 
             # Uncomment while using mean squared error
-            # if mask == "depth":
-            #     loss += loss_coeff * torch.sqrt(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1).float(),
-            #                             target.squeeze(dim=1).float()))
-            # else:
-            #     loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
-            #                             target.squeeze(dim=1))
+            if mask == "depth":
+                loss += loss_coeff * torch.sqrt(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1).float(),
+                                        target.squeeze(dim=1).float()))
+            else:
+                loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
+                                        target.squeeze(dim=1))
 
-            loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
-                                    target.squeeze(dim=1))
+            # Uncomment if using Huber Loss
+            # loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
+            #                         target.squeeze(dim=1))
 
 
         for opt in opts:
@@ -213,12 +218,12 @@ for i in range(0, n_epochs):
 
     plt.figure(2)
     plt.title("RMSE Depth Estimation")
-    plt.plot(loss_accumulator)
+    plt.plot(depth_rmse_accumulator)
     plt.savefig(os.path.join(log_dir, "rmse_depth.png"))
 
     plt.figure(3)
     plt.title("Mean IOU Semantic Segmentation")
-    plt.plot(loss_accumulator)
+    plt.plot(sem_meaniou_accumulator)
     plt.savefig(os.path.join(log_dir, "meaniou_sem.png"))
 
     if i%50 == 0:
