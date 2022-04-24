@@ -29,7 +29,7 @@ num_classes = (1, 40 + 1)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 crop_size = 400
 img_scale = 1.0 / 255
-depth_scale = 3225.70
+depth_scale = 32257.0
 
 img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
