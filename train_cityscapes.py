@@ -90,8 +90,8 @@ lr_encoder = 1e-2
 lr_decoder = 1e-3
 momentum_encoder = 0.9
 momentum_decoder = 0.9
-weight_decay_encoder = 1e-5
-weight_decay_decoder = 1e-5
+weight_decay_encoder = 1e-6
+weight_decay_decoder = 1e-6
 
 n_epochs = 250
 
