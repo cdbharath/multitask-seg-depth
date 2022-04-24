@@ -20,7 +20,8 @@ from torch.autograd import Variable
 cwd = os.path.dirname(os.path.abspath(__file__))
 
 # Pre-processing and post-processing constants #
-DEPTH_COEFF = 32257. # to convert into metres
+# DEPTH_COEFF = 3225.7 # to convert into metres
+DEPTH_COEFF = 5000. # to convert into metres
 HAS_CUDA = torch.cuda.is_available()
 
 IMG_MEAN = np.array([0.485, 0.456, 0.406]).reshape((1, 1, 3))
@@ -29,7 +30,7 @@ IMG_STD = np.array([0.229, 0.224, 0.225]).reshape((1, 1, 3))
 MAX_DEPTH = 8.
 MIN_DEPTH = 0.
 
-NUM_CLASSES = 41
+NUM_CLASSES = 40
 NUM_TASKS = 2 # segm + depth
 
 def prepare_img(img):
@@ -41,8 +42,12 @@ if HAS_CUDA:
     model.cuda()
 model.eval()
 
-ckpt = torch.load('checkpoint_epoch150.pth')
-model.load_state_dict(ckpt)
+# ckpt = torch.load('checkpoint_epoch150.pth')
+# model.load_state_dict(ckpt)
+
+ckpt = torch.load('weights/ExpNYUD_joint.ckpt')
+model.enc.load_state_dict(ckpt["state_dict"], strict=False)
+model.dec.load_state_dict(ckpt["state_dict"], strict=False)
 
 # Inference by image
 # img_path = 'examples/img_5001.png'
