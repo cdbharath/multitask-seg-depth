@@ -25,11 +25,11 @@ os.makedirs(log_dir)
 
 torch.autograd.detect_anomaly()
 
-num_classes = (1, 40 + 1)
+num_classes = (1, 40)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 crop_size = 400
 img_scale = 1.0 / 255
-depth_scale = 32257.0
+depth_scale = 1.0
 
 img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
@@ -67,20 +67,24 @@ valloader = DataLoader(CityscapesDataset(val_img_paths, val_seg_paths, val_ins_p
 print("[INFO]: Loading model")
 
 MNET = MNET(2,num_classes[1])
-ckpt = torch.load(os.path.join(cwd, "weights/mobilenetv2-pretrained.pth"), map_location=device)
-MNET.enc.load_state_dict(ckpt)
+# ckpt = torch.load(os.path.join(cwd, "weights/mobilenetv2-pretrained.pth"), map_location=device)
+# MNET.enc.load_state_dict(ckpt)
+ckpt = torch.load('weights/ExpNYUD_joint.ckpt')
+model.enc.load_state_dict(ckpt["state_dict"], strict=False)
+model.dec.load_state_dict(ckpt["state_dict"], strict=False)
+
 MNET.to(device)
 print("[INFO]: Model has {} parameters".format(sum([p.numel() for p in MNET.parameters()])))
 print("[INFO]: Model and weights loaded successfully")
-for param in MNET.enc.parameters():
-    param.requires_grad=False
+# for param in MNET.enc.parameters():
+#     param.requires_grad=False
 
 ignore_index = 255
 ignore_depth = 0
 
 crit_segm = nn.CrossEntropyLoss(ignore_index=ignore_index).to(device)
-# crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
-crit_depth = nn.MSELoss().to(device)
+crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
+# crit_depth = nn.MSELoss().to(device)
 
 lr_encoder = 1e-2
 lr_decoder = 1e-3
@@ -115,17 +119,17 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
 
             # Uncomment while using mean squared error
             if mask == "ins":
-                pass
-            elif mask == "depth":
-                loss += loss_coeff * torch.sqrt(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1).float(),
-                                        target.squeeze(dim=1).float()))
-            else:
-                loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
-                                        target.squeeze(dim=1))
+                continue
+            # elif mask == "depth":
+            #     loss += loss_coeff * torch.sqrt(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1).float(),
+            #                             target.squeeze(dim=1).float()))
+            # else:
+            #     loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
+            #                             target.squeeze(dim=1))
 
             # Uncomment if using Huber Loss
-            # loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
-            #                         target.squeeze(dim=1))
+            loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
+                                    target.squeeze(dim=1))
 
 
         for opt in opts:
