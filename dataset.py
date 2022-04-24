@@ -55,10 +55,13 @@ class CityscapesDataset(Dataset):
         return len(self.img_paths)
 
     def __getitem__(self, idx):
+        disparity = np.array(Image.open(self.depth_paths[idx])).astype(np.float32)
+        disparity[disparity > 0] = (disparity[disparity > 0] - 1)/256. 
+        disparity[disparity > 0] = (0.209313*2262.52)/disparity[disparity > 0]
         sample = {"image": np.array(Image.open(self.img_paths[idx])),
                   "segm": np.array(Image.open(self.seg_paths[idx])),
                   "ins": np.array(Image.open(self.ins_paths[idx])),
-                  "depth": np.array(Image.open(self.depth_paths[idx])),
+                  "depth": disparity,
                   "names":self.mask_names}
         if self.transform:
             sample = self.transform(sample)
