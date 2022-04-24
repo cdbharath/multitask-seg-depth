@@ -29,7 +29,7 @@ num_classes = (1, 40)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 crop_size = 400
 img_scale = 1.0 / 255
-depth_scale = 1.0
+depth_scale = 250.0
 
 img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
@@ -42,8 +42,8 @@ transform_valid = transforms.Compose([Resize((224, 244)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor()])
 
-train_batch_size = 2
-valid_batch_size = 2
+train_batch_size = 4
+valid_batch_size = 4
 
 train_img_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/leftImg8bit_trainvaltest/leftImg8bit/train/*/*")))
 train_seg_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/gtFine_trainvaltest/gtFine/train/*/*labelIds.png")))
@@ -57,11 +57,11 @@ val_depth_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/disparity_train
 print("[INFO]: Loading data")
 trainloader = DataLoader(CityscapesDataset(train_img_paths, train_seg_paths, train_ins_paths, train_depth_paths, transform=transform_train),
                          batch_size=train_batch_size,
-                         shuffle=True, num_workers=1,
+                         shuffle=True, num_workers=8,
                          drop_last=True)
 valloader = DataLoader(CityscapesDataset(val_img_paths, val_seg_paths, val_ins_paths, val_depth_paths, transform=transform_valid),
                        batch_size=valid_batch_size,
-                       shuffle=False, num_workers=1,
+                       shuffle=False, num_workers=8,
                        drop_last=False)
 
 print("[INFO]: Loading model")
@@ -69,9 +69,9 @@ print("[INFO]: Loading model")
 MNET = MNET(2,num_classes[1])
 # ckpt = torch.load(os.path.join(cwd, "weights/mobilenetv2-pretrained.pth"), map_location=device)
 # MNET.enc.load_state_dict(ckpt)
-ckpt = torch.load('weights/ExpNYUD_joint.ckpt')
-model.enc.load_state_dict(ckpt["state_dict"], strict=False)
-model.dec.load_state_dict(ckpt["state_dict"], strict=False)
+ckpt = torch.load(os.path.join(cwd, 'weights/ExpNYUD_joint.ckpt'), map_location=device)
+MNET.enc.load_state_dict(ckpt["state_dict"], strict=False)
+MNET.dec.load_state_dict(ckpt["state_dict"], strict=False)
 
 MNET.to(device)
 print("[INFO]: Model has {} parameters".format(sum([p.numel() for p in MNET.parameters()])))
