@@ -14,6 +14,7 @@ from mnet.model import MNET
 from utils import InvHuberLoss
 from utils import AverageMeter
 from utils import MeanIoU, RMSE
+from losses import DiscriminativeLoss
 from tqdm import tqdm
 
 cwd = os.path.dirname(os.path.abspath(__file__))
@@ -84,6 +85,11 @@ ignore_depth = 0
 
 crit_segm = nn.CrossEntropyLoss(ignore_index=ignore_index).to(device)
 crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
+
+crit_insegm = DiscriminativeLoss(delta_var=0.5,
+                                    delta_dist=1.5,
+                                    norm=2,
+                                    usegpu=True).to(device)
 # crit_depth = nn.MSELoss().to(device)
 
 lr_encoder = 1e-2
@@ -190,6 +196,7 @@ def validate(model, metrics, dataloader):
 loss_accumulator = []
 depth_rmse_accumulator = []
 sem_meaniou_accumulator = []
+disc_loss_accumulator = []
 
 val_every = 5
 loss_coeffs = (0.5, 0.5)
@@ -197,7 +204,7 @@ print("[INFO]: Start Training")
 for i in range(0, n_epochs):
 
     print("Epoch {:d}".format(i))
-    avg_loss = train(MNET, optims, [crit_depth, crit_segm], trainloader, loss_coeffs)
+    avg_loss = train(MNET, optims, [crit_depth, crit_segm, crit_insegm], trainloader, loss_coeffs)
 
     print("Avg Training Loss {:.3f}".format(avg_loss))
 
@@ -213,6 +220,7 @@ for i in range(0, n_epochs):
     loss_accumulator.append(avg_loss)
     depth_rmse_accumulator.append(vals[0])
     sem_meaniou_accumulator.append(vals[1])
+    disc_loss_accumulator.append(vals[2])
 
     plt.figure(1)
     plt.title("Training Loss")
@@ -228,6 +236,11 @@ for i in range(0, n_epochs):
     plt.title("Mean IOU Semantic Segmentation")
     plt.plot(sem_meaniou_accumulator)
     plt.savefig(os.path.join(log_dir, "meaniou_sem.png"))
+    
+    plt.figure(4)
+    plt.title("Discriminative Loss Instance Segmentation")
+    plt.plot(disc_loss_accumulator)
+    plt.savefig(os.path.join(log_dir, "disc_loss.png"))
 
     if i%50 == 0:
         print("Saving Checkpoint")
