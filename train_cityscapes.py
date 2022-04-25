@@ -199,7 +199,7 @@ sem_meaniou_accumulator = []
 disc_loss_accumulator = []
 
 val_every = 5
-loss_coeffs = (0.5, 0.5)
+loss_coeffs = (0.5, 0.5, 0.5)
 print("[INFO]: Start Training")
 for i in range(0, n_epochs):
 
@@ -212,7 +212,7 @@ for i in range(0, n_epochs):
         sched.step()
 
     if i % val_every == 0:
-        metrics = [RMSE(ignore_val=ignore_depth), MeanIoU(num_classes[1])]
+        metrics = [RMSE(ignore_val=ignore_depth), MeanIoU(num_classes[1]), MeanIoU(16)]
 
         with torch.no_grad():
             vals = validate(MNET, metrics, valloader)
