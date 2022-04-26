@@ -7,14 +7,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.transforms import transforms
-from utils import Normalise, RandomCrop, ToTensor, RandomMirror, Resize
+from utils import Normalise, RandomCrop, ToTensor, RandomMirror, Resize, DiscriminativeLoss
 from dataset import CityscapesDataset
 from torch.utils.data import DataLoader
 from mnet.model import MNET
 from utils import InvHuberLoss
 from utils import AverageMeter
 from utils import MeanIoU, RMSE
-from losses import DiscriminativeLoss
 from tqdm import tqdm
 
 cwd = os.path.dirname(os.path.abspath(__file__))
