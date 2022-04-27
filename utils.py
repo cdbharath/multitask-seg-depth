@@ -99,10 +99,15 @@ class ToTensor:
         sample["image"] = torch.from_numpy(image.transpose((2, 0, 1)))
         for msk_key in msk_keys:
             sample[msk_key] = torch.from_numpy(sample[msk_key]).to(KEYS_TO_DTYPES[msk_key])
-        sample["ins"] = torch.nn.functional.one_hot(sample["ins"], 9).permute(2, 0, 1)[1:, :, :]
+        # sample["ins"] = torch.nn.functional.one_hot(sample["ins"], 17).permute(2, 0, 1)[1:, :, :]
 
         return sample
-        
+
+class ToOnehot:
+    def __call__(self, sample):
+        sample["ins"] = torch.nn.functional.one_hot(sample["ins"], 17).permute(2, 0, 1)[1:, :, :]
+        return sample
+
 class RandomMirror:
     """
     Randomly flip the image and the mask

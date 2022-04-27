@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.transforms import transforms
-from utils import Normalise, RandomCrop, ToTensor, RandomMirror, Resize
+from utils import Normalise, RandomCrop, ToTensor, RandomMirror, Resize, ToOnehot
 from dataset import CityscapesDataset
 from torch.utils.data import DataLoader
 from mnet.model import MNET
@@ -30,7 +30,7 @@ num_classes = (1, 40)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 crop_size = 400
 img_scale = 1.0 / 255
-depth_scale = 500.0
+depth_scale = 250.0
 
 img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
@@ -38,7 +38,8 @@ transform_train = transforms.Compose([RandomMirror(),
                                       # RandomCrop(crop_size=crop_size),
                                       Resize((224, 244)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
-                                      ToTensor()])
+                                      ToTensor(),
+                                      ToOnehot()])
 transform_valid = transforms.Compose([Resize((224, 244)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor()])

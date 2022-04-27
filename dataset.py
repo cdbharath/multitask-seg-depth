@@ -60,9 +60,9 @@ class CityscapesDataset(Dataset):
         disparity[disparity > 0] = (0.209313*2262.52)/disparity[disparity > 0]
         
         ins = np.array(Image.open(self.ins_paths[idx])).astype(np.float32)
-        ins[ins//1000 != 26] = 8
+        ins[ins//1000 != 26] = 16
         ins[ins//1000 == 26] = ins[ins//1000 == 26]%1000
-        ins[ins >= 8] = 8
+        ins[ins >= 16] = 16
         
         sample = {"image": np.array(Image.open(self.img_paths[idx])),
                   "segm": np.array(Image.open(self.seg_paths[idx])),

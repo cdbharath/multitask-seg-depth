@@ -24,7 +24,7 @@ class DiscriminativeLoss(_Loss):
         self.usegpu = usegpu
         assert self.norm in [1, 2]
 
-    def forward(self, input, target, n_clusters=[32]*2):
+    def forward(self, input, target, n_clusters=[16]*32):
         assert not target.requires_grad
         return self._discriminative_loss(input, target, n_clusters)
 
