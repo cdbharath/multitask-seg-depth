@@ -3,3 +3,4 @@ cityscapes/*
 *.pyc
 examples/*
 logs/*
+*.pth

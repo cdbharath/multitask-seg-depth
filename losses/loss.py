@@ -7,6 +7,7 @@ https://github.com/Wizaron/instance-segmentation-pytorch
 from torch.nn.modules.loss import _Loss
 from torch.autograd import Variable
 import torch
+import numpy as np
 
 class DiscriminativeLoss(_Loss):
 
@@ -23,7 +24,7 @@ class DiscriminativeLoss(_Loss):
         self.usegpu = usegpu
         assert self.norm in [1, 2]
 
-    def forward(self, input, target, n_clusters=[8]*2):
+    def forward(self, input, target, n_clusters=[32]*2):
         assert not target.requires_grad
         return self._discriminative_loss(input, target, n_clusters)
 
@@ -61,8 +62,8 @@ class DiscriminativeLoss(_Loss):
             # 1, n_clusters, n_loc,
             target_sample = target[i, :, :n_clusters[i]]
             # n_features, n_cluster
-            mean_sample = input_sample.sum(2) / target_sample.sum(2)
-        
+            mean_sample = input_sample.sum(2) / (target_sample.sum(2) + 1e-5)
+
             # padding
             n_pad_clusters = max_n_clusters - n_clusters[i]
 
@@ -73,7 +74,6 @@ class DiscriminativeLoss(_Loss):
                     pad_sample = pad_sample.cuda()
                 mean_sample = torch.cat((mean_sample, pad_sample), dim=1)
             means.append(mean_sample)
-
         # bs, n_features, max_n_clusters
         means = torch.stack(means)
 
@@ -99,8 +99,8 @@ class DiscriminativeLoss(_Loss):
             target_sample = target[i, :n_clusters[i]]
 
             # n_clusters
-            c_var = var_sample.sum(1) / target_sample.sum(1)
-            var_term += c_var.sum() / n_clusters[i]
+            c_var = var_sample.sum(1) / (target_sample.sum(1) + 1e-5)
+            var_term += c_var.sum() / (n_clusters[i] + 1e-5)
         var_term /= bs
 
         return var_term
