@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.transforms import transforms
-from utils import Normalise, RandomCrop, ToTensor, RandomMirror, Resize, DiscriminativeLoss
+from utils import Normalise, RandomCrop, ToTensor, RandomMirror, Resize
 from dataset import CityscapesDataset
 from torch.utils.data import DataLoader
 from mnet.model import MNET
@@ -15,6 +15,7 @@ from utils import InvHuberLoss
 from utils import AverageMeter
 from utils import MeanIoU, RMSE
 from tqdm import tqdm
+from losses.loss import DiscriminativeLoss
 
 cwd = os.path.dirname(os.path.abspath(__file__))
 
@@ -42,8 +43,8 @@ transform_valid = transforms.Compose([Resize((224, 244)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor()])
 
-train_batch_size = 4
-valid_batch_size = 4
+train_batch_size = 2
+valid_batch_size = 2
 
 train_img_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/leftImg8bit_trainvaltest/leftImg8bit/train/*/*")))
 train_seg_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/gtFine_trainvaltest/gtFine/train/*/*labelIds.png")))
@@ -120,11 +121,14 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
         output = model(image)
 
         for out, target, crit, loss_coeff, mask in zip(output, targets, crits, loss_coeffs, dataloader.dataset.mask_names):
-            target_size = target.size()[1:]
+            if mask != "ins":
+                target_size = target.size()[1:]
+            else:
+                target_size = target.size()[2:]
 
             # Uncomment while using mean squared error
-            if mask == "ins":
-                continue
+            # if mask == "ins":
+            #     continue
             # elif mask == "depth":
             #     loss += loss_coeff * torch.sqrt(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1).float(),
             #                             target.squeeze(dim=1).float()))
@@ -135,7 +139,6 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
             # Uncomment if using Huber Loss
             loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
                                     target.squeeze(dim=1))
-
 
         for opt in opts:
             opt.zero_grad()

@@ -99,6 +99,7 @@ class ToTensor:
         sample["image"] = torch.from_numpy(image.transpose((2, 0, 1)))
         for msk_key in msk_keys:
             sample[msk_key] = torch.from_numpy(sample[msk_key]).to(KEYS_TO_DTYPES[msk_key])
+        sample["ins"] = torch.nn.functional.one_hot(sample["ins"], 16).permute(2, 0, 1)
         return sample
         
 class RandomMirror:
@@ -423,10 +424,12 @@ def discriminative_loss(input, target, n_objects,
 
     alpha = beta = 1.0
     gamma = 0.001
+    # print('target',target.shape)
 
     bs, n_filters, height, width = input.size()
     n_instances = target.size(1)
-
+    # print('input', input.size)
+    # print('target', target.size)
     input = input.permute(0, 2, 3, 1).contiguous().view(
         bs, height * width, n_filters)
     target = target.permute(0, 2, 3, 1).contiguous().view(
@@ -453,7 +456,7 @@ class DiscriminativeLoss(_Loss):
         super(DiscriminativeLoss, self).__init__(size_average)
         self.reduce = reduce
 
-        assert self.size_average
+        # assert self.size_average
         assert self.reduce
 
         self.delta_var = float(delta_var)
@@ -463,7 +466,7 @@ class DiscriminativeLoss(_Loss):
 
         assert self.norm in [1, 2]
 
-    def forward(self, input, target, n_objects, max_n_objects):
+    def forward(self, input, target, n_objects=10, max_n_objects=88):
         return discriminative_loss(input, target, n_objects, max_n_objects,
                                    self.delta_var, self.delta_dist, self.norm,
                                    self.usegpu)
