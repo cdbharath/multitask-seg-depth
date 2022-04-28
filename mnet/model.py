@@ -93,9 +93,10 @@ class CRPBlock(nn.Module):
         return x
 
 class RefineNetDecoder(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, num_instances):
         super().__init__()
         self.num_classes = num_classes
+        self.num_instances = num_instances
         self.conv8 = nn.Conv2d(320, 256, kernel_size=1, stride=1, padding=0, groups=1, bias=False)
         self.conv7 = nn.Conv2d(160, 256, kernel_size=1, stride=1, padding=0, groups=1, bias=False)
         self.conv6 = nn.Conv2d(96, 256, kernel_size=1, stride=1, padding=0, groups=1, bias=False)
@@ -114,8 +115,9 @@ class RefineNetDecoder(nn.Module):
         self.depth = nn.Conv2d(256, 1, kernel_size=3, stride=1, padding=1, dilation=1, groups=1, bias=True)
         self.pre_segm = nn.Conv2d(256, 256, kernel_size=1, stride=1, padding=0, groups=256, bias=False)
         self.segm = nn.Conv2d(256, self.num_classes, kernel_size=3, stride=1, padding=1, dilation=1, groups=1, bias=True)
+        self.segm_cs = nn.Conv2d(256, self.num_classes, kernel_size=3, stride=1, padding=1, dilation=1, groups=1, bias=True)
         self.pre_insegm = nn.Conv2d(256, 256, kernel_size=1, stride=1, padding=0, groups=256, bias=False)
-        self.insegm = nn.Conv2d(256, 16, kernel_size=1, stride=1)
+        self.insegm = nn.Conv2d(256, self.num_instances, kernel_size=1, stride=1)
         
     def make_crp(self, in_planes, out_planes, num_stages, groups=False):
         layers = [CRPBlock(in_planes, out_planes, num_stages, groups=groups)]
@@ -149,7 +151,7 @@ class RefineNetDecoder(nn.Module):
         out_segm = self.relu(out_segm)
         out_segm = self.pre_segm(out_segm)
         out_segm = self.relu(out_segm)
-        out_segm = self.segm(out_segm)
+        out_segm = self.segm_cs(out_segm)
         
         #Instance Segmentation
         out_insegm = self.pre_insegm(l3)
@@ -168,12 +170,13 @@ class RefineNetDecoder(nn.Module):
 
 
 class MNET(nn.Module):
-    def __init__(self, num_tasks, num_classes):
+    def __init__(self, num_tasks, num_classes, num_instances):
         super().__init__()
         self.n_classes = num_classes
         self.n_tasks = num_tasks
+        self.n_instances = num_instances
         self.enc = Mobilenet_backbone()
-        self.dec = RefineNetDecoder(self.n_classes)
+        self.dec = RefineNetDecoder(self.n_classes, self.n_instances)
 
     def forward(self, x):
         l3, l4, l5, l6, l7, l8 = self.enc(x)

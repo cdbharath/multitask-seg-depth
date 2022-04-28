@@ -104,8 +104,11 @@ class ToTensor:
         return sample
 
 class ToOnehot:
+    def __init__(self, num_instances):
+        self.num_instances = num_instances
+
     def __call__(self, sample):
-        sample["ins"] = torch.nn.functional.one_hot(sample["ins"], 17).permute(2, 0, 1)[1:, :, :]
+        sample["ins"] = torch.nn.functional.one_hot(sample["ins"], self.num_instances + 1).permute(2, 0, 1)[1:, :, :]
         return sample
 
 class RandomMirror:

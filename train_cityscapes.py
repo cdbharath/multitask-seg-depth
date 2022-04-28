@@ -27,6 +27,7 @@ os.makedirs(log_dir)
 torch.autograd.detect_anomaly()
 
 num_classes = (1, 40)
+num_instances = 16
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 crop_size = 400
 img_scale = 1.0 / 255
@@ -39,7 +40,7 @@ transform_train = transforms.Compose([RandomMirror(),
                                       Resize((224, 244)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor(),
-                                      ToOnehot()])
+                                      ToOnehot(num_instances=num_instances)])
 transform_valid = transforms.Compose([Resize((224, 244)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor()])
@@ -68,10 +69,11 @@ valloader = DataLoader(CityscapesDataset(val_img_paths, val_seg_paths, val_ins_p
 
 print("[INFO]: Loading model")
 
-MNET = MNET(2,num_classes[1])
+MNET = MNET(num_tasks=2, num_classes=num_classes[1], num_instances=num_instances)
 # ckpt = torch.load(os.path.join(cwd, "weights/mobilenetv2-pretrained.pth"), map_location=device)
 # MNET.enc.load_state_dict(ckpt)
-ckpt = torch.load(os.path.join(cwd, 'weights/ExpKITTI_joint.ckpt'), map_location=device)
+# ckpt = torch.load(os.path.join(cwd, 'weights/ExpKITTI_joint.ckpt'), map_location=device)
+ckpt = torch.load(os.path.join(cwd, 'weights/ExpNYUD_joint.ckpt'), map_location=device)
 MNET.enc.load_state_dict(ckpt["state_dict"], strict=False)
 MNET.dec.load_state_dict(ckpt["state_dict"], strict=False)
 
