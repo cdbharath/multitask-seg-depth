@@ -71,7 +71,7 @@ print("[INFO]: Loading model")
 MNET = MNET(2,num_classes[1])
 # ckpt = torch.load(os.path.join(cwd, "weights/mobilenetv2-pretrained.pth"), map_location=device)
 # MNET.enc.load_state_dict(ckpt)
-ckpt = torch.load(os.path.join(cwd, 'weights/ExpNYUD_joint.ckpt'), map_location=device)
+ckpt = torch.load(os.path.join(cwd, 'weights/ExpKITTI_joint.ckpt'), map_location=device)
 MNET.enc.load_state_dict(ckpt["state_dict"], strict=False)
 MNET.dec.load_state_dict(ckpt["state_dict"], strict=False)
 

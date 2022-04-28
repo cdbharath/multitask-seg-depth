@@ -147,14 +147,20 @@ class RefineNetDecoder(nn.Module):
 
         out_segm = self.pre_segm(l3)
         out_segm = self.relu(out_segm)
+        out_segm = self.pre_segm(out_segm)
+        out_segm = self.relu(out_segm)
         out_segm = self.segm(out_segm)
         
         #Instance Segmentation
         out_insegm = self.pre_insegm(l3)
         out_insegm = self.relu(out_insegm)
+        out_insegm = self.pre_insegm(out_insegm)
+        out_insegm = self.relu(out_insegm)
         out_insegm = self.insegm(out_insegm)
         
         out_depth = self.pre_depth(l3)
+        out_depth = self.relu(out_depth)
+        out_depth = self.pre_depth(out_depth)
         out_depth = self.relu(out_depth)
         out_depth = self.depth(out_depth)
 
