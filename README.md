@@ -3,6 +3,7 @@
 Course Project for Deep Learning (Worcester Polytechnic Institute)
 
 ##### Work on progress!! Instance head development in "inseg" branch
+This repository heavily depends on the below mentioned references.
 
 #### How to run:
 1. The dataset should be downloaded from the following links and placed in a directory named cityscapes
@@ -21,8 +22,7 @@ Python inference_cityscapes.py
 
 ![alt text](./media/architecture.png "architecture")
 
-This code works with both NYUD and Cityscapes at the moment. This repository heavily depends on the below mentioned references.
-
+This code works with both NYUD and Cityscapes at the moment. 
 #### Current Results:
 ###### Cityscapes
 ![alt text](./media/cityscapes.png "cityscapes")
