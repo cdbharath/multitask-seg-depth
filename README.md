@@ -17,9 +17,18 @@ Python train_cityscapes.py
 ```
 Python inference_cityscapes.py
 ```
+#### Proposed Architecture and Loss Function
 
-Team:
+This code works with both NYUD and Cityscapes at the moment. This repository heavily depends on the below mentioned references.
+
+#### Team:
 1. Bharath Kumar Ramesh Babu 
 2. Ghokulji Selvaraj 
 3. Durga Prakash Karuppannan  
 4. Krishna Sathwik Durgaraju 
+
+#### References
+1. [Real-Time Joint Semantic Segmentation and Depth Estimation Using Asymmetric Annotations
+](https://github.com/DrSleep/multi-task-refinenet "Real-Time Joint Semantic Segmentation and Depth Estimation Using Asymmetric Annotations
+")
+2. [Semantic Instance Segmentation with a Discriminative Loss Function](https://github.com/nyoki-mtl/pytorch-discriminative-loss "Semantic Instance Segmentation with a Discriminative Loss Function")
