@@ -17,7 +17,7 @@ Python train_cityscapes.py
 ```
 Python inference_cityscapes.py
 ```
-#### Proposed Architecture and Loss Function
+#### Proposed Methodology
 
 This code works with both NYUD and Cityscapes at the moment. This repository heavily depends on the below mentioned references.
 
