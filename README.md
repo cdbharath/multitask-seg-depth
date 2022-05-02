@@ -18,7 +18,7 @@ Python train_cityscapes.py
 ```
 Python inference_cityscapes.py
 ```
-#### Proposed Methodology
+#### Architecture
 
 ![alt text](./media/architecture.png "architecture")
 
