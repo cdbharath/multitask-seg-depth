@@ -3,7 +3,7 @@
 Course Project for Deep Learning (Worcester Polytechnic Institute)
 
 ##### Work on progress!! Instance head development in "inseg" branch
-This repository heavily depends on the below mentioned references.
+This repository heavily depends on the work mentioned in the references section.
 
 #### How to run:
 1. The dataset should be downloaded from the following links and placed in a directory named cityscapes
