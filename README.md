@@ -3,7 +3,7 @@
 Course Project for Deep Learning (Worcester Polytechnic Institute)
 
 Team:
-Bharath Kumar Ramesh Babu 
-Ghokulji Selvaraj 
-Durga Prakash Karuppannan  
-Krishna Sathwik Durgaraju 
+1. Bharath Kumar Ramesh Babu 
+2. Ghokulji Selvaraj 
+3. Durga Prakash Karuppannan  
+4. Krishna Sathwik Durgaraju 
