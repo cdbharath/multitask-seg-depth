@@ -12,13 +12,13 @@ Course Project for Deep Learning (Worcester Polytechnic Institute)
     3. https://www.cityscapes-dataset.com/file-handling/?packageID=7 <br/> 
 and placed in a directory named cityscapes
 2. To run training script
-"""
+```
 Python train_cityscapes.py
-"""
+```
 3. To run inference script
-"""
+```
 Python inference_cityscapes.py
-"""
+```
 
 Team:
 1. Bharath Kumar Ramesh Babu 
