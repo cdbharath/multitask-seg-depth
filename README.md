@@ -19,9 +19,16 @@ Python inference_cityscapes.py
 ```
 #### Proposed Methodology
 
+![alt text](./media/architecture.png "architecture")
+
 This code works with both NYUD and Cityscapes at the moment. This repository heavily depends on the below mentioned references.
 
 #### Current Results:
+###### Cityscapes
+![alt text](./media/cityscapes.png "cityscapes")
+
+###### NYUD
+![alt text](./media/nyud.png "nyud")
 
 #### Team:
 1. Bharath Kumar Ramesh Babu 
