@@ -21,6 +21,8 @@ Python inference_cityscapes.py
 
 This code works with both NYUD and Cityscapes at the moment. This repository heavily depends on the below mentioned references.
 
+#### Current Results:
+
 #### Team:
 1. Bharath Kumar Ramesh Babu 
 2. Ghokulji Selvaraj 
