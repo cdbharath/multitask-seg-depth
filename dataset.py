@@ -63,9 +63,24 @@ class CityscapesDataset(Dataset):
         ins[ins//1000 != 26] = 16
         ins[ins//1000 == 26] = ins[ins//1000 == 26]%1000
         ins[ins >= 16] = 16
+
+        # Kitti
+        # 0 - unlabelled, 1 - building, 5 - cars, 3 - sidewalk, 2 - road, 6 - fence, 4 - vegetation
+        # Cityscapes
+        # 0 - unlabelled, 26 - car, 13 - fence, 7 - road, 8 - sidewalk, 11 - building, 21 - vegetation
+
+        semantic = np.array(Image.open(self.seg_paths[idx]))
+        semantic[semantic <= 6] = 0
+        semantic[semantic == 26] == 5
+        semantic[semantic == 13] == 6
+        semantic[semantic == 7] == 2
+        semantic[semantic == 8] == 3
+        semantic[semantic == 11] == 1
+        semantic[semantic == 21] == 4
+        semantic[semantic > 6] = 0
         
         sample = {"image": np.array(Image.open(self.img_paths[idx])),
-                  "segm": np.array(Image.open(self.seg_paths[idx])),
+                  "segm": ,
                   "ins": ins,
                   "depth": disparity,
                   "names":self.mask_names}
