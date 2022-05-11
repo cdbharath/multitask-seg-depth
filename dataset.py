@@ -71,16 +71,16 @@ class CityscapesDataset(Dataset):
 
         semantic = np.array(Image.open(self.seg_paths[idx]))
         semantic[semantic <= 6] = 0
-        semantic[semantic == 26] == 5
-        semantic[semantic == 13] == 6
-        semantic[semantic == 7] == 2
-        semantic[semantic == 8] == 3
-        semantic[semantic == 11] == 1
-        semantic[semantic == 21] == 4
+        semantic[semantic == 26] = 5
+        semantic[semantic == 13] = 6
+        semantic[semantic == 7] = 2
+        semantic[semantic == 8] = 3
+        semantic[semantic == 11] = 1
+        semantic[semantic == 21] = 4
         semantic[semantic > 6] = 0
         
         sample = {"image": np.array(Image.open(self.img_paths[idx])),
-                  "segm": ,
+                  "segm": semantic,
                   "ins": ins,
                   "depth": disparity,
                   "names":self.mask_names}
