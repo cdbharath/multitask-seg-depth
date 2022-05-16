@@ -500,6 +500,3 @@ class DiscriminativeLoss(_Loss):
         return discriminative_loss(input, target, n_objects, max_n_objects,
                                    self.delta_var, self.delta_dist, self.norm,
                                    self.usegpu)
-
-def plot_loss():
-    pass

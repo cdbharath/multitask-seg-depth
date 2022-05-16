@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.transforms import transforms
-from utils import Normalise, RandomCrop, ToTensor, RandomMirror, Resize, ToOnehot, Crop
+from utils import Normalise, RandomCrop, ToTensor, RandomMirror, Resize, ToOnehot, Crop, DiscriminativeLoss
 from dataset import CityscapesDataset
 from torch.utils.data import DataLoader
 from mnet.model import MNET
@@ -15,7 +15,6 @@ from utils import InvHuberLoss
 from utils import AverageMeter
 from utils import MeanIoU, RMSE
 from tqdm import tqdm
-from losses.loss import DiscriminativeLoss
 
 cwd = os.path.dirname(os.path.abspath(__file__))
 
@@ -38,7 +37,7 @@ img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
 transform_train = transforms.Compose([RandomMirror(),
                                       # RandomCrop(crop_size=crop_size),
-                                      Crop(0, 0.85, 0, 1),
+                                    #   Crop(0, 0.85, 0, 1),
                                       Resize((224, 244)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor(),
@@ -105,8 +104,8 @@ crit_insegm = DiscriminativeLoss(delta_var=0.5,
 crit_depth = nn.MSELoss().to(device)
 # crit_depth = nn.L1Loss().to(device)
 
-lr_encoder = 1e-2
-lr_decoder = 1e-2
+lr_encoder = 1e-3
+lr_decoder = 1e-3
 momentum_encoder = 0.8
 momentum_decoder = 0.8
 weight_decay_encoder = 1e-5
