@@ -31,7 +31,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("cuda: " + str(device))
 crop_size = 400
 img_scale = 1.0 / 255
-depth_scale = 250.0
+depth_scale = 100.0
 
 img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
