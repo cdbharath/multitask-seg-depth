@@ -32,7 +32,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("cuda: " + str(device))
 crop_size = 400
 img_scale = 1.0 / 255
-depth_scale = 250.0
+depth_scale = 1.0
 
 img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
@@ -96,13 +96,14 @@ ignore_index = 255
 ignore_depth = -1
 
 crit_segm = nn.CrossEntropyLoss(ignore_index=ignore_index).to(device)
-crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
+# crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
 
 crit_insegm = DiscriminativeLoss(delta_var=0.5,
                                     delta_dist=1.5,
                                     norm=2,
                                     usegpu=True).to(device)
 # crit_depth = nn.MSELoss().to(device)
+crit_depth = nn.L1Loss().to(device)
 
 lr_encoder = 1e-2
 lr_decoder = 1e-2

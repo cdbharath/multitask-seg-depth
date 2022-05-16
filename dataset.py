@@ -58,6 +58,7 @@ class CityscapesDataset(Dataset):
         disparity = np.array(Image.open(self.depth_paths[idx])).astype(np.float32)
         disparity[disparity > 0] = (disparity[disparity > 0] - 1)/256. 
         disparity[disparity > 0] = (0.209313*2262.52)/disparity[disparity > 0]
+        disparity[disparity == 0] = 500.
         
         ins = np.array(Image.open(self.ins_paths[idx])).astype(np.float32)
         ins[ins//1000 != 26] = 16
