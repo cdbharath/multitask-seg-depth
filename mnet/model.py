@@ -116,7 +116,8 @@ class RefineNetDecoder(nn.Module):
         self.pre_segm = nn.Conv2d(256, 256, kernel_size=1, stride=1, padding=0, groups=256, bias=False)
         self.segm = nn.Conv2d(256, self.num_classes, kernel_size=3, stride=1, padding=1, dilation=1, groups=1, bias=True)
         self.pre_insegm = nn.Conv2d(256, 256, kernel_size=1, stride=1, padding=0, groups=256, bias=False)
-        self.insegm = nn.Conv2d(256, self.num_instances, kernel_size=1, stride=1)
+        if self.num_instances:
+	        self.insegm = nn.Conv2d(256, self.num_instances, kernel_size=1, stride=1)
         
     def make_crp(self, in_planes, out_planes, num_stages, groups=False):
         layers = [CRPBlock(in_planes, out_planes, num_stages, groups=groups)]
@@ -150,6 +151,8 @@ class RefineNetDecoder(nn.Module):
         out_segm = self.relu(out_segm)
         out_segm = self.pre_segm(out_segm)
         out_segm = self.relu(out_segm)
+        out_segm = self.pre_segm(out_segm)
+        out_segm = self.relu(out_segm)
         out_segm = self.segm(out_segm)
 
         if self.num_instances:       
@@ -161,6 +164,8 @@ class RefineNetDecoder(nn.Module):
             out_insegm = self.insegm(out_insegm)
             
         out_depth = self.pre_depth(l3)
+        out_depth = self.relu(out_depth)
+        out_depth = self.pre_depth(out_depth)
         out_depth = self.relu(out_depth)
         out_depth = self.pre_depth(out_depth)
         out_depth = self.relu(out_depth)

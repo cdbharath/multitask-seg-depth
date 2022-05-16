@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.transforms import transforms
-from utils import Normalise, RandomCrop, ToTensor, RandomMirror, Resize, ToOnehot
+from utils import Normalise, RandomCrop, ToTensor, RandomMirror, Resize, ToOnehot, Crop
 from dataset import CityscapesDataset
 from torch.utils.data import DataLoader
 from mnet.model import MNET
@@ -26,9 +26,10 @@ os.makedirs(log_dir)
 
 torch.autograd.detect_anomaly()
 
-num_classes = (1, 40)
+num_classes = (1, 6)
 num_instances = 16
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("cuda: " + str(device))
 crop_size = 400
 img_scale = 1.0 / 255
 depth_scale = 250.0
@@ -37,6 +38,7 @@ img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
 transform_train = transforms.Compose([RandomMirror(),
                                       # RandomCrop(crop_size=crop_size),
+                                      Crop(0, 0.85, 0, 1),
                                       Resize((224, 244)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor(),
@@ -69,22 +71,29 @@ valloader = DataLoader(CityscapesDataset(val_img_paths, val_seg_paths, val_ins_p
 
 print("[INFO]: Loading model")
 
-MNET = MNET(num_tasks=2, num_classes=num_classes[1], num_instances=num_instances)
+MNET = MNET(num_tasks=2, num_classes=num_classes[1], num_instances=None)
+
+# Load mobile net pretrained weight for training
 # ckpt = torch.load(os.path.join(cwd, "weights/mobilenetv2-pretrained.pth"), map_location=device)
 # MNET.enc.load_state_dict(ckpt)
-# ckpt = torch.load(os.path.join(cwd, 'weights/ExpKITTI_joint.ckpt'), map_location=device)
-ckpt = torch.load(os.path.join(cwd, 'weights/ExpNYUD_joint.ckpt'), map_location=device)
+
+# Load both encoder and decoder with pretrained weights from the reference paper
+ckpt = torch.load(os.path.join(cwd, 'weights/ExpKITTI_joint.ckpt'), map_location=device)
+# ckpt = torch.load(os.path.join(cwd, 'weights/ExpNYUD_joint.ckpt'), map_location=device)
 MNET.enc.load_state_dict(ckpt["state_dict"], strict=False)
 MNET.dec.load_state_dict(ckpt["state_dict"], strict=False)
+# print(MNET.dec.children())
+# decoder = nn.Sequential(MNET.dec)
 
 MNET.to(device)
 print("[INFO]: Model has {} parameters".format(sum([p.numel() for p in MNET.parameters()])))
 print("[INFO]: Model and weights loaded successfully")
+
 # for param in MNET.enc.parameters():
 #     param.requires_grad=False
 
 ignore_index = 255
-ignore_depth = 0
+ignore_depth = -1
 
 crit_segm = nn.CrossEntropyLoss(ignore_index=ignore_index).to(device)
 crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
@@ -96,9 +105,9 @@ crit_insegm = DiscriminativeLoss(delta_var=0.5,
 # crit_depth = nn.MSELoss().to(device)
 
 lr_encoder = 1e-2
-lr_decoder = 1e-3
-momentum_encoder = 0.8
-momentum_decoder = 0.8
+lr_decoder = 1e-2
+momentum_encoder = 0.9
+momentum_decoder = 0.9
 weight_decay_encoder = 1e-5
 weight_decay_decoder = 1e-5
 
@@ -120,6 +129,7 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
     for sample in pbar:
         loss = 0.0
         image = sample["image"].float().to(device)
+        print(image.shape)
         targets = [sample[k].to(device) for k in dataloader.dataset.mask_names]        
         output = model(image)
 
@@ -139,12 +149,11 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
             #     loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
             #                             target.squeeze(dim=1))
 
-            # Uncomment if using Huber Loss
-            # if mask == "ins":
-            #     print(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False),
-            #                         target))
-
-            #     continue
+            # Uncomment while not using instance head
+            if mask == "ins":
+                # print(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False),
+                #                     target))
+                continue
             loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
                                     target.squeeze(dim=1))
 
@@ -222,7 +231,8 @@ for i in range(0, n_epochs):
         sched.step()
 
     if i % val_every == 0:
-        metrics = [RMSE(ignore_val=ignore_depth), MeanIoU(num_classes[1]), MeanIoU(16)]
+        # metrics = [RMSE(ignore_val=ignore_depth), MeanIoU(num_classes[1]), MeanIoU(num_instances)]
+        metrics = [RMSE(ignore_val=ignore_depth), MeanIoU(num_classes[1])]
 
         with torch.no_grad():
             vals = validate(MNET, metrics, valloader)
@@ -230,7 +240,7 @@ for i in range(0, n_epochs):
     loss_accumulator.append(avg_loss)
     depth_rmse_accumulator.append(vals[0])
     sem_meaniou_accumulator.append(vals[1])
-    disc_loss_accumulator.append(vals[2])
+    # disc_loss_accumulator.append(vals[2])
 
     plt.figure(1)
     plt.title("Training Loss")
@@ -247,10 +257,10 @@ for i in range(0, n_epochs):
     plt.plot(sem_meaniou_accumulator)
     plt.savefig(os.path.join(log_dir, "meaniou_sem.png"))
     
-    plt.figure(4)
-    plt.title("Discriminative Loss Instance Segmentation")
-    plt.plot(disc_loss_accumulator)
-    plt.savefig(os.path.join(log_dir, "disc_loss.png"))
+    # plt.figure(4)
+    # plt.title("Discriminative Loss Instance Segmentation")
+    # plt.plot(disc_loss_accumulator)
+    # plt.savefig(os.path.join(log_dir, "disc_loss.png"))
 
     if i%50 == 0:
         print("Saving Checkpoint")

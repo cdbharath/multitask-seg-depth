@@ -84,6 +84,27 @@ class RandomCrop:
             sample[msk_key] = sample[msk_key][top : top + new_h, left : left + new_w]
         return sample
         
+class Crop:
+    """
+    Crop randomly the image in a sample.
+    Args:
+        crop_size (int): Desired output size.
+    """
+
+    def __init__(self, h1, h2, w1, w2):
+        self.h1 = h1
+        self.h2 = h2
+        self.w1 = w1
+        self.w2 = w2
+
+    def __call__(self, sample):
+        image = sample["image"]
+        msk_keys = sample["names"]
+        h, w = image.shape[:2]
+        sample["image"] = image[int(h*self.h1) : int(h*self.h2), int(w*self.w1) : int(w*self.w2)]
+        for msk_key in msk_keys:
+            sample[msk_key] = sample[msk_key][int(h*self.h1) : int(h*self.h2), int(w*self.w1) : int(w*self.w2)]
+        return sample
 
 class ToTensor:
     """
