@@ -32,7 +32,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("cuda: " + str(device))
 crop_size = 400
 img_scale = 1.0 / 255
-depth_scale = 1.0
+depth_scale = 250.0
 
 img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
@@ -102,17 +102,17 @@ crit_insegm = DiscriminativeLoss(delta_var=0.5,
                                     delta_dist=1.5,
                                     norm=2,
                                     usegpu=True).to(device)
-# crit_depth = nn.MSELoss().to(device)
-crit_depth = nn.L1Loss().to(device)
+crit_depth = nn.MSELoss().to(device)
+# crit_depth = nn.L1Loss().to(device)
 
 lr_encoder = 1e-2
 lr_decoder = 1e-2
-momentum_encoder = 0.9
-momentum_decoder = 0.9
+momentum_encoder = 0.8
+momentum_decoder = 0.8
 weight_decay_encoder = 1e-5
 weight_decay_decoder = 1e-5
 
-n_epochs = 1000
+n_epochs = 500
 
 optims = [torch.optim.SGD(MNET.enc.parameters(), lr=lr_encoder, momentum=momentum_encoder, weight_decay=weight_decay_encoder),
           torch.optim.SGD(MNET.dec.parameters(), lr=lr_decoder, momentum=momentum_decoder, weight_decay=weight_decay_decoder)]
@@ -130,7 +130,6 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
     for sample in pbar:
         loss = 0.0
         image = sample["image"].float().to(device)
-        print(image.shape)
         targets = [sample[k].to(device) for k in dataloader.dataset.mask_names]        
         output = model(image)
 
@@ -141,22 +140,22 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
                 target_size = target.size()[2:]
 
             # Uncomment while using mean squared error
-            # if mask == "ins":
-            #     continue
-            # elif mask == "depth":
-            #     loss += loss_coeff * torch.sqrt(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1).float(),
-            #                             target.squeeze(dim=1).float()))
-            # else:
-            #     loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
-            #                             target.squeeze(dim=1))
+            if mask == "ins":
+                continue
+            elif mask == "depth":
+                loss += loss_coeff * torch.sqrt(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1).float(),
+                                        target.squeeze(dim=1).float()))
+            else:
+                loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
+                                        target.squeeze(dim=1))
 
             # Uncomment while not using instance head
-            if mask == "ins":
-                # print(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False),
-                #                     target))
-                continue
-            loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
-                                    target.squeeze(dim=1))
+            # if mask == "ins":
+            #     # print(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False),
+            #     #                     target))
+            #     continue
+            # loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
+            #                         target.squeeze(dim=1))
 
         for opt in opts:
             opt.zero_grad()
