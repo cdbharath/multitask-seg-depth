@@ -93,8 +93,9 @@ class CRPBlock(nn.Module):
         return x
 
 class RefineNetDecoder(nn.Module):
-    def __init__(self, num_classes, num_instances):
+    def __init__(self, tasks, num_classes, num_instances):
         super().__init__()
+        self.tasks = tasks
         self.num_classes = num_classes
         self.num_instances = num_instances
         self.conv8 = nn.Conv2d(320, 256, kernel_size=1, stride=1, padding=0, groups=1, bias=False)
@@ -147,50 +148,42 @@ class RefineNetDecoder(nn.Module):
         l3 = self.relu(l3+l4)
         l3 = self.crp1(l3)
 
-        out_segm = self.pre_segm(l3)
-        out_segm = self.relu(out_segm)
-        out_segm = self.pre_segm(out_segm)
-        out_segm = self.relu(out_segm)
-        out_segm = self.pre_segm(out_segm)
-        out_segm = self.relu(out_segm)
-        out_segm = self.segm(out_segm)
-
-        if self.num_instances:       
+        out_insegm = None
+        out_segm = None
+        out_depth = None
+        if self.tasks[2]:
             #Instance Segmentation
             out_insegm = self.pre_insegm(l3)
             out_insegm = self.relu(out_insegm)
             out_insegm = self.pre_insegm(out_insegm)
             out_insegm = self.relu(out_insegm)
             out_insegm = self.insegm(out_insegm)
-            
-        out_depth = self.pre_depth(l3)
-        out_depth = self.relu(out_depth)
-        out_depth = self.pre_depth(out_depth)
-        out_depth = self.relu(out_depth)
-        out_depth = self.pre_depth(out_depth)
-        out_depth = self.relu(out_depth)
-        out_depth = self.depth(out_depth)
+        if self.tasks[1]:
+            # Semantic Segmentation
+            out_segm = self.pre_segm(l3)
+            out_segm = self.relu(out_segm)
+            out_segm = self.pre_segm(out_segm)
+            out_segm = self.relu(out_segm)
+            out_segm = self.segm(out_segm)
+        if self.tasks[0]:
+            # Depth Estimation
+            out_depth = self.pre_depth(l3)
+            out_depth = self.relu(out_depth)
+            out_depth = self.pre_depth(out_depth)
+            out_depth = self.relu(out_depth)
+            out_depth = self.depth(out_depth)
 
-        if self.num_instances:
-            return out_depth, out_segm, out_insegm
-        else:
-            return out_depth, out_segm
+        return out_depth, out_segm, out_insegm
 
 class MNET(nn.Module):
-    def __init__(self, num_tasks, num_classes, num_instances):
+    def __init__(self, tasks=[True, False, False], num_classes=None, num_instances=None):
         super().__init__()
         self.n_classes = num_classes
-        self.n_tasks = num_tasks
+        self.tasks = tasks  #[Depth Estimation, Semantic Segmentation, Instance Segmentation]
         self.n_instances = num_instances
         self.enc = Mobilenet_backbone()
-        self.dec = RefineNetDecoder(self.n_classes, self.n_instances)
+        self.dec = RefineNetDecoder(self.tasks, self.n_classes, self.n_instances)
 
     def forward(self, x):
         l3, l4, l5, l6, l7, l8 = self.enc(x)
-
-        if self.n_instances:
-            out_depth, out_segm, out_insegm = self.dec(l3, l4, l5, l6, l7, l8)
-            return out_depth, out_segm, out_insegm  
-        else:
-            out_depth, out_segm = self.dec(l3, l4, l5, l6, l7, l8)
-            return out_depth, out_segm
+        out_depth, out_segm, out_insegm = self.dec(l3, l4, l5, l6, l7, l8)

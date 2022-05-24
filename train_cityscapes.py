@@ -27,6 +27,7 @@ torch.autograd.detect_anomaly()
 
 num_classes = (1, 6)
 num_instances = 16
+tasks = [False, True, False]
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("cuda: " + str(device))
 crop_size = 400
@@ -37,7 +38,7 @@ img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
 transform_train = transforms.Compose([RandomMirror(),
                                       # RandomCrop(crop_size=crop_size),
-                                    #   Crop(0, 0.85, 0, 1),
+                                      # Crop(0, 0.85, 0, 1),
                                       Resize((224, 244)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor(),
@@ -70,19 +71,16 @@ valloader = DataLoader(CityscapesDataset(val_img_paths, val_seg_paths, val_ins_p
 
 print("[INFO]: Loading model")
 
-MNET = MNET(num_tasks=2, num_classes=num_classes[1], num_instances=None)
+MNET = MNET(tasks=[False, True, False], num_classes=num_classes[1], num_instances=None)
 
 # Load mobile net pretrained weight for training
-# ckpt = torch.load(os.path.join(cwd, "weights/mobilenetv2-pretrained.pth"), map_location=device)
-# MNET.enc.load_state_dict(ckpt)
+ckpt = torch.load(os.path.join(cwd, "weights/mobilenetv2-pretrained.pth"), map_location=device)
+MNET.enc.load_state_dict(ckpt)
 
 # Load both encoder and decoder with pretrained weights from the reference paper
-ckpt = torch.load(os.path.join(cwd, 'weights/ExpKITTI_joint.ckpt'), map_location=device)
 # ckpt = torch.load(os.path.join(cwd, 'weights/ExpNYUD_joint.ckpt'), map_location=device)
-MNET.enc.load_state_dict(ckpt["state_dict"], strict=False)
-MNET.dec.load_state_dict(ckpt["state_dict"], strict=False)
-# print(MNET.dec.children())
-# decoder = nn.Sequential(MNET.dec)
+# MNET.enc.load_state_dict(ckpt["state_dict"], strict=False)
+# MNET.dec.load_state_dict(ckpt["state_dict"], strict=False)
 
 MNET.to(device)
 print("[INFO]: Model has {} parameters".format(sum([p.numel() for p in MNET.parameters()])))
@@ -101,7 +99,7 @@ crit_insegm = DiscriminativeLoss(delta_var=0.5,
                                     delta_dist=1.5,
                                     norm=2,
                                     usegpu=True).to(device)
-crit_depth = nn.MSELoss().to(device)
+# crit_depth = nn.MSELoss().to(device)
 # crit_depth = nn.L1Loss().to(device)
 
 lr_encoder = 1e-3
@@ -132,21 +130,28 @@ def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):
         targets = [sample[k].to(device) for k in dataloader.dataset.mask_names]        
         output = model(image)
 
-        for out, target, crit, loss_coeff, mask in zip(output, targets, crits, loss_coeffs, dataloader.dataset.mask_names):
+        for out, target, crit, loss_coeff, mask, task in zip(output, targets, crits, loss_coeffs, dataloader.dataset.mask_names, tasks):
             if mask != "ins":
                 target_size = target.size()[1:]
             else:
                 target_size = target.size()[2:]
 
-            # Uncomment while using mean squared error
-            if mask == "ins":
+            if not task:
                 continue
-            elif mask == "depth":
-                loss += loss_coeff * torch.sqrt(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1).float(),
-                                        target.squeeze(dim=1).float()))
-            else:
-                loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
-                                        target.squeeze(dim=1))
+
+            loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
+                                    target.squeeze(dim=1))
+
+
+            # Uncomment while using mean squared error
+            # if mask == "ins":
+            #     continue
+            # elif mask == "depth":
+            #     loss += loss_coeff * torch.sqrt(crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1).float(),
+            #                             target.squeeze(dim=1).float()))
+            # else:
+            #     loss += loss_coeff * crit(F.interpolate(out, target_size, mode="bilinear", align_corners=False).squeeze(dim=1),
+            #                             target.squeeze(dim=1))
 
             # Uncomment while not using instance head
             # if mask == "ins":
@@ -196,7 +201,9 @@ def validate(model, metrics, dataloader):
             outputs = model(image)
 
             # Backward
-            for out, target, metric in zip(outputs, targets, metrics):
+            for out, target, metric, task in zip(outputs, targets, metrics, tasks):
+                if not task:
+                    continue
                 metric.update(
                     F.interpolate(out, size=target.shape[1:], mode="bilinear", align_corners=False)
                     .squeeze(dim=1)
@@ -230,36 +237,38 @@ for i in range(0, n_epochs):
         sched.step()
 
     if i % val_every == 0:
-        # metrics = [RMSE(ignore_val=ignore_depth), MeanIoU(num_classes[1]), MeanIoU(num_instances)]
-        metrics = [RMSE(ignore_val=ignore_depth), MeanIoU(num_classes[1])]
+        metrics = [RMSE(ignore_val=ignore_depth), MeanIoU(num_classes[1]), MeanIoU(num_instances)]
 
         with torch.no_grad():
             vals = validate(MNET, metrics, valloader)
 
     loss_accumulator.append(avg_loss)
-    depth_rmse_accumulator.append(vals[0])
-    sem_meaniou_accumulator.append(vals[1])
-    # disc_loss_accumulator.append(vals[2])
-
     plt.figure(1)
     plt.title("Training Loss")
     plt.plot(loss_accumulator)
     plt.savefig(os.path.join(log_dir, "training_loss.png"))
 
-    plt.figure(2)
-    plt.title("RMSE Depth Estimation")
-    plt.plot(depth_rmse_accumulator)
-    plt.savefig(os.path.join(log_dir, "rmse_depth.png"))
+    if tasks[0]: 
+        depth_rmse_accumulator.append(vals[0])
+        plt.figure(2)
+        plt.title("RMSE Depth Estimation")
+        plt.plot(depth_rmse_accumulator)
+        plt.savefig(os.path.join(log_dir, "rmse_depth.png"))
 
-    plt.figure(3)
-    plt.title("Mean IOU Semantic Segmentation")
-    plt.plot(sem_meaniou_accumulator)
-    plt.savefig(os.path.join(log_dir, "meaniou_sem.png"))
-    
-    # plt.figure(4)
-    # plt.title("Discriminative Loss Instance Segmentation")
-    # plt.plot(disc_loss_accumulator)
-    # plt.savefig(os.path.join(log_dir, "disc_loss.png"))
+    if tasks[1]:
+        sem_meaniou_accumulator.append(vals[1])
+        plt.figure(3)
+        plt.title("Mean IOU Semantic Segmentation")
+        plt.plot(sem_meaniou_accumulator)
+        plt.savefig(os.path.join(log_dir, "meaniou_sem.png"))
+
+    if tasks[2]:       
+        disc_loss_accumulator.append(vals[2])
+
+        # plt.figure(4)
+        # plt.title("Discriminative Loss Instance Segmentation")
+        # plt.plot(disc_loss_accumulator)
+        # plt.savefig(os.path.join(log_dir, "disc_loss.png"))
 
     if i%50 == 0:
         print("Saving Checkpoint")
