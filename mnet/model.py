@@ -117,7 +117,7 @@ class RefineNetDecoder(nn.Module):
         self.pre_segm = nn.Conv2d(256, 256, kernel_size=1, stride=1, padding=0, groups=256, bias=False)
         self.segm = nn.Conv2d(256, self.num_classes, kernel_size=3, stride=1, padding=1, dilation=1, groups=1, bias=True)
         self.pre_insegm = nn.Conv2d(256, 256, kernel_size=1, stride=1, padding=0, groups=256, bias=False)
-        if self.num_instances:
+        if self.tasks[2]:
 	        self.insegm = nn.Conv2d(256, self.num_instances, kernel_size=1, stride=1)
         
     def make_crp(self, in_planes, out_planes, num_stages, groups=False):
@@ -187,3 +187,4 @@ class MNET(nn.Module):
     def forward(self, x):
         l3, l4, l5, l6, l7, l8 = self.enc(x)
         out_depth, out_segm, out_insegm = self.dec(l3, l4, l5, l6, l7, l8)
+        return out_depth, out_segm, out_insegm

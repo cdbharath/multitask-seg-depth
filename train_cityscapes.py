@@ -25,7 +25,7 @@ os.makedirs(log_dir)
 
 torch.autograd.detect_anomaly()
 
-num_classes = (1, 6)
+num_classes = 40
 num_instances = 16
 tasks = [False, True, False]
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -71,7 +71,7 @@ valloader = DataLoader(CityscapesDataset(val_img_paths, val_seg_paths, val_ins_p
 
 print("[INFO]: Loading model")
 
-MNET = MNET(tasks=[False, True, False], num_classes=num_classes[1], num_instances=None)
+MNET = MNET(tasks=tasks, num_classes=num_classes, num_instances=None)
 
 # Load mobile net pretrained weight for training
 ckpt = torch.load(os.path.join(cwd, "weights/mobilenetv2-pretrained.pth"), map_location=device)
@@ -93,7 +93,7 @@ ignore_index = 255
 ignore_depth = -1
 
 crit_segm = nn.CrossEntropyLoss(ignore_index=ignore_index).to(device)
-# crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
+crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
 
 crit_insegm = DiscriminativeLoss(delta_var=0.5,
                                     delta_dist=1.5,
@@ -237,7 +237,7 @@ for i in range(0, n_epochs):
         sched.step()
 
     if i % val_every == 0:
-        metrics = [RMSE(ignore_val=ignore_depth), MeanIoU(num_classes[1]), MeanIoU(num_instances)]
+        metrics = [RMSE(ignore_val=ignore_depth), MeanIoU(num_classes), MeanIoU(num_instances)]
 
         with torch.no_grad():
             vals = validate(MNET, metrics, valloader)

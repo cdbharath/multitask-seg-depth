@@ -66,13 +66,12 @@ class CityscapesDataset(Dataset):
         ins[ins >= 16] = 16
         
         sample = {"image": np.array(Image.open(self.img_paths[idx])),
-                  "segm": semantic,
+                  "segm": np.array(Image.open(self.seg_paths[idx])),
                   "ins": ins,
                   "depth": disparity,
                   "names":self.mask_names}
         if self.transform:
             sample = self.transform(sample)
-
         return sample
 
 if __name__ == "__main__":
