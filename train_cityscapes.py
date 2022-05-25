@@ -184,7 +184,7 @@ def validate(model, metrics, dataloader):
     pbar = tqdm(dataloader)
 
     def get_val(metrics):
-        results = [(m.name, m.val()) for m in metrics]
+        results = [(m.name, m.val()) if task else 0 for (m, task) in zip(metrics, tasks)]
         names, vals = list(zip(*results))
         out = ["{} : {:4f}".format(name, val) for name, val in results]
         return vals, " | ".join(out)
