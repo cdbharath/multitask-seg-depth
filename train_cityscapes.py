@@ -102,10 +102,10 @@ crit_insegm = DiscriminativeLoss(delta_var=0.5,
 # crit_depth = nn.MSELoss().to(device)
 # crit_depth = nn.L1Loss().to(device)
 
-lr_encoder = 1e-3
-lr_decoder = 1e-3
-momentum_encoder = 0.8
-momentum_decoder = 0.8
+lr_encoder = 1e-2
+lr_decoder = 1e-2
+momentum_encoder = 0.9
+momentum_decoder = 0.9
 weight_decay_encoder = 1e-5
 weight_decay_decoder = 1e-5
 
