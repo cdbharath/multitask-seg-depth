@@ -25,7 +25,7 @@ os.makedirs(log_dir)
 
 torch.autograd.detect_anomaly()
 
-num_classes = 40
+num_classes = 8
 num_instances = 16
 tasks = [False, True, False]
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -47,8 +47,8 @@ transform_valid = transforms.Compose([Resize((224, 244)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor()])
 
-train_batch_size = 32
-valid_batch_size = 32
+train_batch_size = 8
+valid_batch_size = 8
 
 train_img_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/leftImg8bit_trainvaltest/leftImg8bit/train/*/*")))
 train_seg_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/gtFine_trainvaltest/gtFine/train/*/*labelIds.png")))
@@ -62,11 +62,11 @@ val_depth_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/disparity_train
 print("[INFO]: Loading data")
 trainloader = DataLoader(CityscapesDataset(train_img_paths, train_seg_paths, train_ins_paths, train_depth_paths, transform=transform_train),
                          batch_size=train_batch_size,
-                         shuffle=True, num_workers=8,
+                         shuffle=True, num_workers=4,
                          drop_last=True)
 valloader = DataLoader(CityscapesDataset(val_img_paths, val_seg_paths, val_ins_paths, val_depth_paths, transform=transform_valid),
                        batch_size=valid_batch_size,
-                       shuffle=False, num_workers=8,
+                       shuffle=False, num_workers=4,
                        drop_last=False)
 
 print("[INFO]: Loading model")
@@ -92,8 +92,11 @@ print("[INFO]: Model and weights loaded successfully")
 ignore_index = 255
 ignore_depth = -1
 
-crit_segm = nn.CrossEntropyLoss(ignore_index=ignore_index).to(device)
-crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
+# crit_segm = nn.CrossEntropyLoss(ignore_index=ignore_index).to(device)
+# crit_depth = InvHuberLoss(ignore_index=ignore_depth).to(device)
+
+crit_segm = nn.CrossEntropyLoss().to(device)
+crit_depth = InvHuberLoss().to(device)
 
 crit_insegm = DiscriminativeLoss(delta_var=0.5,
                                     delta_dist=1.5,
@@ -109,7 +112,7 @@ momentum_decoder = 0.9
 weight_decay_encoder = 1e-5
 weight_decay_decoder = 1e-5
 
-n_epochs = 500
+n_epochs = 250
 
 optims = [torch.optim.SGD(MNET.enc.parameters(), lr=lr_encoder, momentum=momentum_encoder, weight_decay=weight_decay_encoder),
           torch.optim.SGD(MNET.dec.parameters(), lr=lr_decoder, momentum=momentum_decoder, weight_decay=weight_decay_decoder)]
