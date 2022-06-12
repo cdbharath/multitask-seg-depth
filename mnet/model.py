@@ -164,6 +164,8 @@ class RefineNetDecoder(nn.Module):
             out_segm = self.relu(out_segm)
             out_segm = self.pre_segm(out_segm)
             out_segm = self.relu(out_segm)
+            out_segm = self.pre_segm(out_segm)
+            out_segm = self.relu(out_segm)
             out_segm = self.segm(out_segm)
         if self.tasks[0]:
             # Depth Estimation

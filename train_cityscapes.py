@@ -27,7 +27,7 @@ torch.autograd.detect_anomaly()
 
 num_classes = 8
 num_instances = 16
-tasks = [False, True, False]
+tasks = [True, True, False]
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("cuda: " + str(device))
 crop_size = 400
@@ -36,19 +36,19 @@ depth_scale = 100.0
 
 img_mean = np.array([0.485, 0.456, 0.406])
 img_std = np.array([0.229, 0.224, 0.225])
-transform_train = transforms.Compose([RandomMirror(),
+transform_train = transforms.Compose([# RandomMirror(),
                                       # RandomCrop(crop_size=crop_size),
                                       # Crop(0, 0.85, 0, 1),
-                                      Resize((224, 244)),
+                                      Resize((400, 400)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor(),
                                       ToOnehot(num_instances=num_instances)])
-transform_valid = transforms.Compose([Resize((224, 244)),
+transform_valid = transforms.Compose([Resize((400, 400)),
                                       Normalise(scale=img_scale, mean=img_mean.reshape((1,1,3)), std=img_std.reshape(((1,1,3))), depth_scale=depth_scale),
                                       ToTensor()])
 
-train_batch_size = 8
-valid_batch_size = 8
+train_batch_size = 4
+valid_batch_size = 4
 
 train_img_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/leftImg8bit_trainvaltest/leftImg8bit/train/*/*")))
 train_seg_paths = sorted(glob.glob(os.path.join(cwd, "cityscapes/gtFine_trainvaltest/gtFine/train/*/*labelIds.png")))
@@ -107,19 +107,19 @@ crit_insegm = DiscriminativeLoss(delta_var=0.5,
 
 lr_encoder = 1e-2
 lr_decoder = 1e-2
-momentum_encoder = 0.9
-momentum_decoder = 0.9
+momentum_encoder = 0.0
+momentum_decoder = 0.0
 weight_decay_encoder = 1e-5
 weight_decay_decoder = 1e-5
 
-n_epochs = 250
+n_epochs = 400
 
 optims = [torch.optim.SGD(MNET.enc.parameters(), lr=lr_encoder, momentum=momentum_encoder, weight_decay=weight_decay_encoder),
           torch.optim.SGD(MNET.dec.parameters(), lr=lr_decoder, momentum=momentum_decoder, weight_decay=weight_decay_decoder)]
 
 opt_scheds = []
 for opt in optims:
-    opt_scheds.append(torch.optim.lr_scheduler.MultiStepLR(opt, np.arange(0, n_epochs, 100), gamma=0.1))
+    opt_scheds.append(torch.optim.lr_scheduler.MultiStepLR(opt, np.arange(0, n_epochs, 100), gamma=0.5))
 
 
 def train(model, opts, crits, dataloader, loss_coeffs=(1.0,), grad_norm=0.0):

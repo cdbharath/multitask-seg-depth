@@ -16,7 +16,7 @@ class NYUDDataset(Dataset):
         self.seg_paths = seg_paths
         self.depth_paths = depth_paths
         self.transform = transform
-        self.mask_names = ("depth", "segm")
+        self.mask_names = ("depth", "segm", "ins")
 
     def __len__(self):
         return len(self.img_paths)
@@ -25,6 +25,7 @@ class NYUDDataset(Dataset):
         sample = {"image": np.array(Image.open(self.img_paths[idx])),
                   "segm": np.array(scipy.io.loadmat(self.seg_paths[idx])["segmentation"]),
                   "depth": np.array(Image.open(self.depth_paths[idx])),
+                  "ins": np.array(scipy.io.loadmat(self.seg_paths[idx])["segmentation"]),
                   "names":self.mask_names}
         if self.transform:
             sample = self.transform(sample)
